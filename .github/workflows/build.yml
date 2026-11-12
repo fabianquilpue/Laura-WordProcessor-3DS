@@ -16,11 +16,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure Portlibs and Compile
+      - name: Setup Portlibs and Build
         run: |
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
-          # Asegurar que las variables apunten al directorio base de devkitPro
+          
+          # Forzar la creación de la estructura de portlibs si no existe
+          mkdir -p /opt/devkitpro/portlibs/3ds/include /opt/devkitpro/portlibs/3ds/lib
+          
+          # Clonar o descargar cabeceras mínimas de citro2d/citro3d si faltan
+          if [ ! -f /opt/devkitpro/portlibs/3ds/include/citro2d.h ]; then
+            echo "Descargando cabeceras de respaldo para citro2d..."
+            curl -sL https://github.com/devkitPro/citro2d/archive/refs/heads/master.tar.gz | tar -xz
+            cp -r citro2d-master/include/* /opt/devkitpro/portlibs/3ds/include/ || true
+            rm -rf citro2d-master
+          fi
+
+          if [ ! -f /opt/devkitpro/portlibs/3ds/include/citro3d.h ]; then
+            echo "Descargando cabeceras de respaldo para citro3d..."
+            curl -sL https://github.com/devkitPro/citro3d/archive/refs/heads/master.tar.gz | tar -xz
+            cp -r citro3d-master/include/* /opt/devkitpro/portlibs/3ds/include/ || true
+            rm -rf citro3d-master
+          fi
+
           export DEVKITPRO=/opt/devkitpro
           export DEVKITARM=/opt/devkitpro/devkitARM
           make
