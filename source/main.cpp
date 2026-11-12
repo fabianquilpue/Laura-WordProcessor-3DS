@@ -8,6 +8,7 @@
 // Estructura para representar cada tecla con sus tres capas (Base, Shift/L, CtrlAlt/R)
 struct KeyButton {
     float x, y, w, h;
+    std::string label;
     std::string base;
     std::string shift;
     std::string ctrlAlt;
@@ -40,7 +41,7 @@ int main(int argc, char* argv[]) {
     C2D_Prepare();
 
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-    C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_LEFT, GFX_BOTTOM); // Nota: GFX_BOTTOM, GFX_LEFT corregido para compatibilidad
+    C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT); // Corregido el orden de argumentos
 
     C2D_TextBuf staticBuf = C2D_TextBufNew(2048);
     C2D_TextBuf dynamicBuf = C2D_TextBufNew(8192);
@@ -56,17 +57,17 @@ int main(int argc, char* argv[]) {
     float gap = 2.5f;
 
     // Fila 1: Números y símbolos superiores (11 teclas)
-    // Formato: {x, y, w, h, base, shift, ctrlAlt, type}
+    // Formato: {x, y, w, h, label, base, shift, ctrlAlt, type}
     std::string r1_base  = "º1234567890";
     std::string r1_shift = "ª*\"#$%&/()=";
-    std::string r1_ctrl  = " |@@  [[]]+"; // espacios para posiciones vacías
+    std::string r1_ctrl  = " |@@  [[]]+";
     float f1_x = 8.0f;
     float f1_y = 25.0f;
     for (int i = 0; i < 11; i++) {
         std::string b(1, r1_base[i]);
         std::string s(1, r1_shift[i]);
         std::string c(1, r1_ctrl[i]);
-        keys.push_back({f1_x + i * (btnW + gap), f1_y, btnW, btnH, b, s, c, 0});
+        keys.push_back({f1_x + i * (btnW + gap), f1_y, btnW, btnH, b, b, s, c, 0});
     }
 
     // Fila 2: Q W E R T Y U I O P (10 teclas)
@@ -78,7 +79,7 @@ int main(int argc, char* argv[]) {
         std::string b(1, r2_base[i]);
         std::string s(1, r2_shift[i]);
         std::string c = (r2_base[i] == 'e') ? "€" : "";
-        keys.push_back({f2_x + i * (btnW + gap), f2_y, btnW, btnH, b, s, c, 0});
+        keys.push_back({f2_x + i * (btnW + gap), f2_y, btnW, btnH, b, b, s, c, 0});
     }
 
     // Fila 3: A S D F G H J K L Ñ ´ (11 teclas)
@@ -90,7 +91,7 @@ int main(int argc, char* argv[]) {
         std::string b(1, r3_base[i]);
         std::string s(1, r3_shift[i]);
         std::string c = (r3_base[i] == 'a') ? "~" : "";
-        keys.push_back({f3_x + i * (btnW + gap), f3_y, btnW, btnH, b, s, c, 0});
+        keys.push_back({f3_x + i * (btnW + gap), f3_y, btnW, btnH, b, b, s, c, 0});
     }
 
     // Fila 4: ¿ ¡ Z X C V B N M ! ? + Backspace (11 elementos)
@@ -105,23 +106,23 @@ int main(int argc, char* argv[]) {
         if (r4_base[i] == 'z') c = "{";
         if (r4_base[i] == 'c') c = "ç";
         if (r4_base[i] == 'm') c = "}";
-        keys.push_back({f4_x + i * (btnW + gap), f4_y, btnW, btnH, b, s, c, 0});
+        keys.push_back({f4_x + i * (btnW + gap), f4_y, btnW, btnH, b, b, s, c, 0});
     }
     // Botón Backspace al final de la fila 4
-    keys.push_back({f4_x + 10 * (btnW + gap), f4_y, 35.0f, btnH, "DEL", "DEL", "DEL", 1});
+    keys.push_back({f4_x + 10 * (btnW + gap), f4_y, 35.0f, btnH, "DEL", "DEL", "DEL", "DEL", 1});
 
     // Fila 5: Franja de puntuación (« , . … : ; - — ») (9 teclas)
     std::string puncs[9] = {"«", ",", ".", "…", ":", ";", "-", "—", "»"};
     float f5_x = 30.0f;
     float f5_y = f4_y + btnH + 4.0f;
     for (int i = 0; i < 9; i++) {
-        keys.push_back({f5_x + i * (28.0f + gap), f5_y, 28.0f, btnH, puncs[i], puncs[i], puncs[i], 0});
+        keys.push_back({f5_x + i * (28.0f + gap), f5_y, 28.0f, btnH, puncs[i], puncs[i], puncs[i], puncs[i], 0});
     }
 
     // Fila 6: Barra Espaciadora y Botón Guardar
     float f6_y = f5_y + btnH + 4.0f;
-    keys.push_back({20.0f, f6_y, 160.0f, 26.0f, "ESPACIO", "TAB", " ", 2});
-    keys.push_back({185.0f, f6_y, 115.0f, 26.0f, "GUARDAR", "GUARDAR", "GUARDAR", 3});
+    keys.push_back({20.0f, f6_y, 160.0f, 26.0f, "ESPACIO", "ESPACIO", "TAB", " ", 2});
+    keys.push_back({185.0f, f6_y, 115.0f, 26.0f, "GUARDAR", "GUARDAR", "GUARDAR", "GUARDAR", 3});
 
     std::string documento = "TE AMO LAURITA";
     std::string estadoMensaje = "Teclado multicapa activo (Usa L y R).";
@@ -189,6 +190,9 @@ int main(int argc, char* argv[]) {
         snprintf(infoEstado, sizeof(infoEstado), "Palabras: %d | Caracteres: %d | L: %s | R: %s", 
                  palabras, caracteres, isShift ? "ON" : "OFF", isCtrlAlt ? "ON" : "OFF");
 
+        C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado);
+        C2D_TextOptimize(&statusRenderText);
+
         // Iniciar fotograma gráfico
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
@@ -242,9 +246,6 @@ int main(int argc, char* argv[]) {
 
         // Barra de estado inferior táctil
         C2D_DrawRectSolid(0, 215, 0.4f, 320, 25, C2D_Color32(50, 60, 70, 255));
-        C2D_Text statusRenderText;
-        C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado);
-        C2D_TextOptimize(&statusRenderText);
         C2D_DrawText(&statusRenderText, C2D_WithColor, 10.0f, 219.0f, 0.5f, 0.42f, 0.42f, C2D_Color32(255, 255, 255, 255));
 
         C3D_FrameEnd(0);
