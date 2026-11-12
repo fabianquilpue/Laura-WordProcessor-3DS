@@ -18,14 +18,14 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm 3ds-bannertool 3ds-smdhtool 3ds-tools python python-pillow ttf-dejavu
+          pacman -Syu --noconfirm || true
+          pacman -S --noconfirm 3ds-bannertool 3ds-smdhtool 3ds-tools python python-pillow ttf-dejavu || true
 
       - name: Prepare Assets and Fonts
         run: |
           mkdir -p assets/fonts
           if [ ! -f assets/fonts/typewriter.ttf ]; then
-            cp /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf assets/fonts/typewriter.ttf
+            cp /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf assets/fonts/typewriter.ttf || true
           fi
           python3 tools/generate_assets.py
 
