@@ -20,7 +20,7 @@ PORTLIBS	:=	$(DEVKITPRO)/portlibs/3ds
 ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard
 
 CFLAGS		:=	-Wall -O2 -ffunction-sections \
-			$(ARCH) -DARM11 -D_3DS \
+			$(ARCH) -D__3DS__ \
 			-I$(DEVKITPRO)/libctru/include \
 			-I$(PORTLIBS)/include \
 			$(foreach dir,$(INCLUDES),-I$(dir))
