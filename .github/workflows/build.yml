@@ -18,6 +18,11 @@ jobs:
 
       - name: Build Laura 3DS
         run: |
+          # Asegurar que las herramientas de devkitPro (como elf23ds) estén en el PATH
+          export PATH=/opt/devkitpro/tools/bin:$PATH
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=/opt/devkitpro/devkitARM
+          
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
           make
