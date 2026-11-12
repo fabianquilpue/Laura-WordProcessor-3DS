@@ -16,24 +16,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Portlibs and Build
+      - name: Setup Dependencies and Build
         run: |
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
           
-          # Forzar la creación de la estructura de portlibs si no existe
+          # Crear directorios de portlibs
           mkdir -p /opt/devkitpro/portlibs/3ds/include /opt/devkitpro/portlibs/3ds/lib
           
-          # Clonar o descargar cabeceras mínimas de citro2d/citro3d si faltan
+          # Descargar cabeceras de libctru (necesarias para 3ds.h)
+          if [ ! -d /opt/devkitpro/libctru ]; then
+            echo "Descargando libctru..."
+            curl -sL https://github.com/devkitPro/libctru/archive/refs/heads/master.tar.gz | tar -xz
+            mkdir -p /opt/devkitpro/libctru
+            cp -r libctru-master/* /opt/devkitpro/libctru/
+            rm -rf libctru-master
+          fi
+
+          # Descargar citro2d si falta
           if [ ! -f /opt/devkitpro/portlibs/3ds/include/citro2d.h ]; then
-            echo "Descargando cabeceras de respaldo para citro2d..."
+            echo "Descargando citro2d..."
             curl -sL https://github.com/devkitPro/citro2d/archive/refs/heads/master.tar.gz | tar -xz
             cp -r citro2d-master/include/* /opt/devkitpro/portlibs/3ds/include/ || true
             rm -rf citro2d-master
           fi
 
+          # Descargar citro3d si falta
           if [ ! -f /opt/devkitpro/portlibs/3ds/include/citro3d.h ]; then
-            echo "Descargando cabeceras de respaldo para citro3d..."
+            echo "Descargando citro3d..."
             curl -sL https://github.com/devkitPro/citro3d/archive/refs/heads/master.tar.gz | tar -xz
             cp -r citro3d-master/include/* /opt/devkitpro/portlibs/3ds/include/ || true
             rm -rf citro3d-master
