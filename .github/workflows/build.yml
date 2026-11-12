@@ -31,5 +31,4 @@ jobs:
           name: Laura-WordProcessor-3DS
           path: |
             Laura.3dsx
-            Laura.cia
             Laura.smdh
