@@ -16,14 +16,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Inspect devkitPro environment and Build
+      - name: Build Laura 3DS
         run: |
-          echo "=== Variables de entorno ==="
-          env | grep -i devkit || true
-
-          echo "=== Buscando 3ds.h y citro2d.h en el contenedor ==="
-          find /opt/devkitpro -name "3ds.h" -o -name "citro2d.h" -o -name "libcitro2d.a" 2>/dev/null || true
-
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
           make
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Laura-WordProcessor-3DS
+          path: |
+            Laura.3dsx
+            Laura.cia
+            Laura.smdh
