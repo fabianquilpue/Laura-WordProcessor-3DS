@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
     C2D_Prepare();
 
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-    C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT); // Corregido el orden de argumentos
+    C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
     C2D_TextBuf staticBuf = C2D_TextBufNew(2048);
     C2D_TextBuf dynamicBuf = C2D_TextBufNew(8192);
@@ -50,19 +50,18 @@ int main(int argc, char* argv[]) {
     C2D_TextParse(&headerText, staticBuf, "Laura - Procesador de Texto");
     C2D_TextOptimize(&headerText);
 
-    // 2. Construcción completa del teclado multicapa en la pantalla inferior (320x240)
+    // 2. Construcción optimizada y proporcionada del teclado multicapa (Pantalla inferior 320x240)
     std::vector<KeyButton> keys;
-    float btnW = 27.0f;
-    float btnH = 26.0f;
-    float gap = 2.5f;
+    float btnW = 26.0f;
+    float btnH = 24.0f;
+    float gap = 3.0f;
 
     // Fila 1: Números y símbolos superiores (11 teclas)
-    // Formato: {x, y, w, h, label, base, shift, ctrlAlt, type}
     std::string r1_base  = "º1234567890";
     std::string r1_shift = "ª*\"#$%&/()=";
     std::string r1_ctrl  = " |@@  [[]]+";
     float f1_x = 8.0f;
-    float f1_y = 25.0f;
+    float f1_y = 15.0f;
     for (int i = 0; i < 11; i++) {
         std::string b(1, r1_base[i]);
         std::string s(1, r1_shift[i]);
@@ -74,7 +73,7 @@ int main(int argc, char* argv[]) {
     std::string r2_base  = "qwertyuiop";
     std::string r2_shift = "QWERTYUIOP";
     float f2_x = 22.0f;
-    float f2_y = f1_y + btnH + 4.0f;
+    float f2_y = f1_y + btnH + 3.0f;
     for (int i = 0; i < 10; i++) {
         std::string b(1, r2_base[i]);
         std::string s(1, r2_shift[i]);
@@ -85,8 +84,8 @@ int main(int argc, char* argv[]) {
     // Fila 3: A S D F G H J K L Ñ ´ (11 teclas)
     std::string r3_base  = "asdfghjklñ´";
     std::string r3_shift = "ASDFGHJKLÑ'";
-    float f3_x = 15.0f;
-    float f3_y = f2_y + btnH + 4.0f;
+    float f3_x = 10.0f;
+    float f3_y = f2_y + btnH + 3.0f;
     for (int i = 0; i < 11; i++) {
         std::string b(1, r3_base[i]);
         std::string s(1, r3_shift[i]);
@@ -97,8 +96,8 @@ int main(int argc, char* argv[]) {
     // Fila 4: ¿ ¡ Z X C V B N M ! ? + Backspace (11 elementos)
     std::string r4_base  = "¿¡zxcvbnm!?";
     std::string r4_shift = "¿¡ZXCVBNM!?";
-    float f4_x = 10.0f;
-    float f4_y = f3_y + btnH + 4.0f;
+    float f4_x = 8.0f;
+    float f4_y = f3_y + btnH + 3.0f;
     for (int i = 0; i < 10; i++) {
         std::string b(1, r4_base[i]);
         std::string s(1, r4_shift[i]);
@@ -108,24 +107,24 @@ int main(int argc, char* argv[]) {
         if (r4_base[i] == 'm') c = "}";
         keys.push_back({f4_x + i * (btnW + gap), f4_y, btnW, btnH, b, b, s, c, 0});
     }
-    // Botón Backspace al final de la fila 4
-    keys.push_back({f4_x + 10 * (btnW + gap), f4_y, 35.0f, btnH, "DEL", "DEL", "DEL", "DEL", 1});
+    // Botón Backspace
+    keys.push_back({f4_x + 10 * (btnW + gap), f4_y, 42.0f, btnH, "DEL", "DEL", "DEL", "DEL", 1});
 
     // Fila 5: Franja de puntuación (« , . … : ; - — ») (9 teclas)
     std::string puncs[9] = {"«", ",", ".", "…", ":", ";", "-", "—", "»"};
-    float f5_x = 30.0f;
-    float f5_y = f4_y + btnH + 4.0f;
+    float f5_x = 22.0f;
+    float f5_y = f4_y + btnH + 3.0f;
     for (int i = 0; i < 9; i++) {
         keys.push_back({f5_x + i * (28.0f + gap), f5_y, 28.0f, btnH, puncs[i], puncs[i], puncs[i], puncs[i], 0});
     }
 
     // Fila 6: Barra Espaciadora y Botón Guardar
-    float f6_y = f5_y + btnH + 4.0f;
-    keys.push_back({20.0f, f6_y, 160.0f, 26.0f, "ESPACIO", "ESPACIO", "TAB", " ", 2});
-    keys.push_back({185.0f, f6_y, 115.0f, 26.0f, "GUARDAR", "GUARDAR", "GUARDAR", "GUARDAR", 3});
+    float f6_y = f5_y + btnH + 3.0f;
+    keys.push_back({15.0f, f6_y, 160.0f, 25.0f, "ESPACIO", "ESPACIO", "TAB", " ", 2});
+    keys.push_back({182.0f, f6_y, 125.0f, 25.0f, "GUARDAR", "GUARDAR", "GUARDAR", "GUARDAR", 3});
 
     std::string documento = "TE AMO LAURITA";
-    std::string estadoMensaje = "Teclado multicapa activo (Usa L y R).";
+    std::string estadoMensaje = "Teclado multicapa completo activo.";
 
     // 3. Bucle principal de la aplicación
     while (aptMainLoop()) {
@@ -135,7 +134,7 @@ int main(int argc, char* argv[]) {
 
         if (kDown & KEY_START) break;
 
-        // Detectar modificadores físicos en tiempo real: L (Shift) y R (Ctrl+Alt)
+        // Modificadores físicos L (Shift) y R (Ctrl+Alt)
         bool isShift = (kHeld & KEY_L);
         bool isCtrlAlt = (kHeld & KEY_R);
 
@@ -147,7 +146,7 @@ int main(int argc, char* argv[]) {
                 if (touch.px >= key.x && touch.px <= (key.x + key.w) &&
                     touch.py >= key.y && touch.py <= (key.y + key.h)) {
                     
-                    if (key.type == 0) { // Carácter normal según capa activa
+                    if (key.type == 0) { // Carácter normal
                         std::string charToAdd = key.base;
                         if (isCtrlAlt && !key.ctrlAlt.empty()) charToAdd = key.ctrlAlt;
                         else if (isShift) charToAdd = key.shift;
@@ -159,12 +158,12 @@ int main(int argc, char* argv[]) {
                         if (!documento.empty()) documento.pop_back();
                         estadoMensaje = "Caracter borrado.";
                     } 
-                    else if (key.type == 2) { // Espacio / Tab con Shift
+                    else if (key.type == 2) { // Espacio / Tab
                         if (isShift) documento += "\t";
                         else documento += " ";
                         estadoMensaje = isShift ? "Tabulacion." : "Espacio.";
                     } 
-                    else if (key.type == 3) { // Guardar en SD
+                    else if (key.type == 3) { // Guardar
                         if (guardarEnSD(documento)) {
                             estadoMensaje = "Guardado en sdmc:/laura_documento.txt";
                         } else {
@@ -204,7 +203,7 @@ int main(int argc, char* argv[]) {
         C2D_DrawText(&headerText, C2D_WithColor, 10.0f, 4.0f, 0.5f, 0.5f, 0.5f, C2D_Color32(255, 255, 255, 255));
         C2D_DrawText(&docRenderText, C2D_WithColor | C2D_WordWrap, 10.0f, 34.0f, 0.5f, 0.52f, 0.52f, C2D_Color32(30, 30, 30, 255), 380.0f);
 
-        // --- PANTALLA INFERIOR (Teclado Multicapa) ---
+        // --- PANTALLA INFERIOR (Teclado Completo Multicapa) ---
         C2D_TargetClear(bottomScreen, C2D_Color32(225, 230, 238, 255));
         C2D_SceneBegin(bottomScreen);
 
@@ -220,26 +219,26 @@ int main(int argc, char* argv[]) {
             // Dibujar fondo de tecla
             C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, colorFondo);
 
-            // Determinar qué carácter mostrar en grande según los modificadores físicos L y R
+            // Determinar carácter principal
             std::string mainChar = key.base;
             if (isCtrlAlt && !key.ctrlAlt.empty()) mainChar = key.ctrlAlt;
             else if (isShift) mainChar = key.shift;
 
-            if (key.type > 0) mainChar = key.label; // Etiquetas especiales como DEL, GUARDAR, ESPACIO
+            if (key.type > 0) mainChar = key.label;
 
-            // Dibujar carácter principal (central y grande)
+            // Dibujar carácter principal centrado
             C2D_Text keyLabel;
             C2D_TextParse(&keyLabel, dynamicBuf, mainChar.c_str());
             C2D_TextOptimize(&keyLabel);
-            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + (key.w / 2.0f) - 4.0f, key.y + 4.0f, 0.5f, 0.38f, 0.38f, colorTexto);
+            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + (key.w / 2.0f) - 3.0f, key.y + 3.0f, 0.5f, 0.35f, 0.35f, colorTexto);
 
-            // Si es una tecla normal, mostrar las variantes inactivas en las esquinas (Multicapa visual)
+            // Mostrar variante Shift en la esquina superior izquierda si aplica
             if (key.type == 0 && !isShift && !isCtrlAlt) {
                 if (!key.shift.empty() && key.shift != key.base) {
                     C2D_Text shiftLbl;
                     C2D_TextParse(&shiftLbl, dynamicBuf, key.shift.c_str());
                     C2D_TextOptimize(&shiftLbl);
-                    C2D_DrawText(&shiftLbl, C2D_WithColor, key.x + 2.0f, key.y + 2.0f, 0.5f, 0.22f, 0.22f, C2D_Color32(120, 120, 130, 200));
+                    C2D_DrawText(&shiftLbl, C2D_WithColor, key.x + 2.0f, key.y + 1.0f, 0.5f, 0.20f, 0.20f, C2D_Color32(120, 120, 130, 200));
                 }
             }
         }
