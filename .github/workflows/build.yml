@@ -21,34 +21,29 @@ jobs:
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
           
-          # Crear directorios necesarios
+          # Limpiar y recrear directorios para evitar estados corruptos
+          rm -rf /opt/devkitpro/libctru /opt/devkitpro/portlibs/3ds
           mkdir -p /opt/devkitpro/portlibs/3ds/include /opt/devkitpro/portlibs/3ds/lib
           mkdir -p /opt/devkitpro/libctru/include /opt/devkitpro/libctru/lib
           
-          # Descargar e instalar libctru correctamente
-          if [ ! -f /opt/devkitpro/libctru/include/3ds.h ]; then
-            echo "Descargando e instalando libctru..."
-            curl -sL https://github.com/devkitPro/libctru/archive/refs/heads/master.tar.gz | tar -xz
-            cp -r libctru-master/include/* /opt/devkitpro/libctru/include/
-            [ -d libctru-master/lib ] && cp -r libctru-master/lib/* /opt/devkitpro/libctru/lib/ || true
-            rm -rf libctru-master
-          fi
+          # Descargar e instalar libctru
+          echo "Descargando e instalando libctru..."
+          curl -sL https://github.com/devkitPro/libctru/archive/refs/heads/master.tar.gz | tar -xz
+          cp -r libctru-master/include/* /opt/devkitpro/libctru/include/
+          [ -d libctru-master/lib ] && cp -r libctru-master/lib/* /opt/devkitpro/libctru/lib/ || true
+          rm -rf libctru-master
 
-          # Descargar citro2d si falta
-          if [ ! -f /opt/devkitpro/portlibs/3ds/include/citro2d.h ]; then
-            echo "Descargando citro2d..."
-            curl -sL https://github.com/devkitPro/citro2d/archive/refs/heads/master.tar.gz | tar -xz
-            cp -r citro2d-master/include/* /opt/devkitpro/portlibs/3ds/include/ || true
-            rm -rf citro2d-master
-          fi
+          # Descargar citro2d
+          echo "Descargando citro2d..."
+          curl -sL https://github.com/devkitPro/citro2d/archive/refs/heads/master.tar.gz | tar -xz
+          cp -r citro2d-master/include/* /opt/devkitpro/portlibs/3ds/include/ || true
+          rm -rf citro2d-master
 
-          # Descargar citro3d si falta
-          if [ ! -f /opt/devkitpro/portlibs/3ds/include/citro3d.h ]; then
-            echo "Descargando citro3d..."
-            curl -sL https://github.com/devkitPro/citro3d/archive/refs/heads/master.tar.gz | tar -xz
-            cp -r citro3d-master/include/* /opt/devkitpro/portlibs/3ds/include/ || true
-            rm -rf citro3d-master
-          fi
+          # Descargar citro3d
+          echo "Descargando citro3d..."
+          curl -sL https://github.com/devkitPro/citro3d/archive/refs/heads/master.tar.gz | tar -xz
+          cp -r citro3d-master/include/* /opt/devkitpro/portlibs/3ds/include/ || true
+          rm -rf citro3d-master
 
           export DEVKITPRO=/opt/devkitpro
           export DEVKITARM=/opt/devkitpro/devkitARM
