@@ -16,46 +16,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Dependencies and Build
+      - name: Inspect devkitPro environment and Build
         run: |
+          echo "=== Variables de entorno ==="
+          env | grep -i devkit || true
+
+          echo "=== Buscando 3ds.h y citro2d.h en el contenedor ==="
+          find /opt/devkitpro -name "3ds.h" -o -name "citro2d.h" -o -name "libcitro2d.a" 2>/dev/null || true
+
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
-          
-          # Crear directorios limpios
-          mkdir -p /opt/devkitpro/portlibs/3ds/include /opt/devkitpro/portlibs/3ds/lib
-          mkdir -p /opt/devkitpro/libctru/include /opt/devkitpro/libctru/lib
-          
-          # Descargar libctru usando la rama main y validando la extracción
-          echo "Descargando libctru..."
-          curl -L -o libctru.tar.gz https://github.com/devkitPro/libctru/archive/refs/heads/main.tar.gz
-          tar -xzf libctru.tar.gz
-          cp -r libctru-*/include/* /opt/devkitpro/libctru/include/
-          [ -d libctru-*/lib ] && cp -r libctru-*/lib/* /opt/devkitpro/libctru/lib/ || true
-          rm -rf libctru.tar.gz libctru-*
-
-          # Descargar citro2d
-          echo "Descargando citro2d..."
-          curl -L -o citro2d.tar.gz https://github.com/devkitPro/citro2d/archive/refs/heads/master.tar.gz
-          tar -xzf citro2d.tar.gz
-          cp -r citro2d-*/include/* /opt/devkitpro/portlibs/3ds/include/
-          rm -rf citro2d.tar.gz citro2d-*
-
-          # Descargar citro3d
-          echo "Descargando citro3d..."
-          curl -L -o citro3d.tar.gz https://github.com/devkitPro/citro3d/archive/refs/heads/master.tar.gz
-          tar -xzf citro3d.tar.gz
-          cp -r citro3d-*/include/* /opt/devkitpro/portlibs/3ds/include/
-          rm -rf citro3d.tar.gz citro3d-*
-
-          export DEVKITPRO=/opt/devkitpro
-          export DEVKITARM=/opt/devkitpro/devkitARM
           make
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Laura-WordProcessor-3DS
-          path: |
-            Laura.3dsx
-            Laura.cia
-            Laura.smdh
