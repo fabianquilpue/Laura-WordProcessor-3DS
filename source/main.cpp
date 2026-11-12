@@ -1,5 +1,5 @@
 #include <citro2d.h>
-#include <ctru.h>
+#include <3ds.h>
 #include <string>
 #include "editor.hpp"
 
