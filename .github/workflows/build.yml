@@ -21,15 +21,16 @@ jobs:
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
           
-          # Crear directorios de portlibs
+          # Crear directorios necesarios
           mkdir -p /opt/devkitpro/portlibs/3ds/include /opt/devkitpro/portlibs/3ds/lib
+          mkdir -p /opt/devkitpro/libctru/include /opt/devkitpro/libctru/lib
           
-          # Descargar cabeceras de libctru (necesarias para 3ds.h)
-          if [ ! -d /opt/devkitpro/libctru ]; then
-            echo "Descargando libctru..."
+          # Descargar e instalar libctru correctamente
+          if [ ! -f /opt/devkitpro/libctru/include/3ds.h ]; then
+            echo "Descargando e instalando libctru..."
             curl -sL https://github.com/devkitPro/libctru/archive/refs/heads/master.tar.gz | tar -xz
-            mkdir -p /opt/devkitpro/libctru
-            cp -r libctru-master/* /opt/devkitpro/libctru/
+            cp -r libctru-master/include/* /opt/devkitpro/libctru/include/
+            [ -d libctru-master/lib ] && cp -r libctru-master/lib/* /opt/devkitpro/libctru/lib/ || true
             rm -rf libctru-master
           fi
 
