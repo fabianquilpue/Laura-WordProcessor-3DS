@@ -21,26 +21,27 @@ jobs:
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
           
-          # Crear directorios de portlibs y libctru de forma segura
+          # Crear directorios limpios
+          rm -rf /opt/devkitpro/libctru /opt/devkitpro/portlibs/3ds
           mkdir -p /opt/devkitpro/portlibs/3ds/include /opt/devkitpro/portlibs/3ds/lib
           mkdir -p /opt/devkitpro/libctru/include /opt/devkitpro/libctru/lib
           
-          # Descargar e instalar libctru de forma controlada
+          # Descargar e instalar libctru sin errores de sintaxis en tar
           echo "Descargando libctru..."
-          curl -sL https://github.com/devkitPro/libctru/archive/refs/heads/master.tar.gz | tar -xz -f -
+          curl -L https://github.com/devkitPro/libctru/archive/refs/heads/master.tar.gz | tar -xz
           cp -r libctru-master/include/* /opt/devkitpro/libctru/include/
           [ -d libctru-master/lib ] && cp -r libctru-master/lib/* /opt/devkitpro/libctru/lib/ || true
           rm -rf libctru-master
 
-          # Descargar citro2d de forma controlada
+          # Descargar citro2d
           echo "Descargando citro2d..."
-          curl -sL https://github.com/devkitPro/citro2d/archive/refs/heads/master.tar.gz | tar -xz -f -
+          curl -L https://github.com/devkitPro/citro2d/archive/refs/heads/master.tar.gz | tar -xz
           cp -r citro2d-master/include/* /opt/devkitpro/portlibs/3ds/include/
           rm -rf citro2d-master
 
-          # Descargar citro3d de forma controlada
+          # Descargar citro3d
           echo "Descargando citro3d..."
-          curl -sL https://github.com/devkitPro/citro3d/archive/refs/heads/master.tar.gz | tar -xz -f -
+          curl -L https://github.com/devkitPro/citro3d/archive/refs/heads/master.tar.gz | tar -xz
           cp -r citro3d-master/include/* /opt/devkitpro/portlibs/3ds/include/
           rm -rf citro3d-master
 
