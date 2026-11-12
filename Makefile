@@ -32,62 +32,40 @@ LDFLAGS		:=	-specs=3dsx.specs $(ARCH) \
 
 LIBS		:=	-lcitro2d -lcitro3d -lctru -lm
 
-#---------------------------------------------------------------------------------
-ifneq ($(BUILD),$(notdir $(CURDIR)))
-#---------------------------------------------------------------------------------
+CFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))
+CPPFILES	:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.cpp))
+SFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.s))
 
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
-export TOPDIR	:=	$(CURDIR)
+OBJS		:=	$(addprefix $(BUILD)/,$(CFILES:.c=.o) $(CPPFILES:.cpp=.o) $(SFILES:.s=.o))
 
-export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
-			$(foreach dir,$(DATA),$(CURDIR)/$(dir))
+all: $(TARGET).3dsx $(TARGET).cia
 
-export CFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-export CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-export SFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+$(TARGET).3dsx: $(BUILD)/$(TARGET).elf
+	@echo builtin 3dsx...
+	elf23ds $< $@
+	@smdhtool --create "Laura Word Processor" "Editor de texto minimalista" "Laura" $(TARGET).smdh || true
+	@bannertool makesmdh -s "Laura Word Processor" -l "Laura" -p "Autor" -i assets/icon.png -o $(TARGET).smdh || true
 
-export OFILES	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+$(TARGET).cia: $(TARGET).3dsx
+	@echo builtin cia...
+	cp $(TARGET).3dsx $(TARGET).cia || true
 
-export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-			-I$(PORTLIBS)/include \
-			$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-			-I$(CURDIR)/$(BUILD)
+$(BUILD)/$(TARGET).elf: $(OBJS)
+	@echo linking ...
+	$(CXX) $(LDFLAGS) $(OBJS) $(LIBS) -o $@
 
-export LIBDIRS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+$(BUILD)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	@echo "Compilando C++ $<..."
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
-.PHONY: all clean
-
-all: $(OUTPUT).3dsx $(OUTPUT).cia
-
-$(OUTPUT).3dsx: $(OUTPUT).elf
-$(OUTPUT).cia: $(OUTPUT).elf
+$(BUILD)/%.o: %.c
+	@mkdir -p $(dir $@)
+	@echo "Compilando C $<..."
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(OUTPUT).3dsx $(OUTPUT).elf $(OUTPUT).smdh $(OUTPUT).cia
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(TARGET).cia $(TARGET).bnr
 
-#---------------------------------------------------------------------------------
-else
-#---------------------------------------------------------------------------------
-
-DEPENDS	:=	$(OFILES:.o=.d)
-
-$(OUTPUT).3dsx: $(OUTPUT).elf
-	@echo builtin 3dsx...
-	elf23ds $< $@
-	@smdhtool --create "Laura Word Processor" "Editor de texto minimalista" "Laura" $(OUTPUT).smdh || true
-	@bannertool makesmdh -s "Laura Word Processor" -l "Laura" -p "Autor" -i assets/icon.png -o $(OUTPUT).smdh || true
-
-$(OUTPUT).cia: $(OUTPUT).3dsx
-	@echo builtin cia...
-	cp $(OUTPUT).3dsx $(OUTPUT).cia || true
-
-%.elf:
-	@echo linking ...
-	$(LD) $(LDFLAGS) $(OFILES) $(LIBDIRS) $(LIBS) -o $@
-
--include $(DEPENDS)
-
-#---------------------------------------------------------------------------------
-endif
-#---------------------------------------------------------------------------------
+.PHONY: all clean
