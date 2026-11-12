@@ -16,10 +16,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify Environment and Build
+      - name: Configure Portlibs and Compile
         run: |
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
+          # Asegurar que las variables apunten al directorio base de devkitPro
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=/opt/devkitpro/devkitARM
           make
 
       - name: Upload Build Artifacts
