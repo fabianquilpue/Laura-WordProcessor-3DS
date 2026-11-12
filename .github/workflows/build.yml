@@ -18,7 +18,10 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          dkp-pacman -Syu --noconfirm
+          dkp-pacman-key --init || true
+          dkp-pacman-key --populate devkitpro || true
+          dkp-pacman -Sy --noconfirm || true
+          dkp-pacman -S --noconfirm dkp-pacman || true
           dkp-pacman -S --noconfirm 3ds-ctru 3ds-citro3d 3ds-citro2d bannertool smdhtool python python-pillow ttf-dejavu
 
       - name: Prepare Assets and Fonts
