@@ -44,13 +44,13 @@ all: $(TARGET).3dsx $(TARGET).cia
 
 $(TARGET).3dsx: $(BUILD)/$(TARGET).elf
 	@echo builtin 3dsx...
-	3dsxtool $< $@ --romfs=$(ROMFS)
+	3dsxtool $< $@
 	@smdhtool --create "Laura Word Processor" "Editor de texto minimalista" "Laura" $(TARGET).smdh || true
 	@bannertool makesmdh -s "Laura Word Processor" -l "Laura" -p "Autor" -i assets/icon.png -o $(TARGET).smdh || true
 
 $(TARGET).cia: $(TARGET).3dsx
 	@echo builtin cia...
-	@makerom -f cia -o $(TARGET).cia -exefslogo -rsf $(TARGET).rsf -target t -major 1 -minor 0 -micro 0 -icon $(TARGET).smdh -banner assets/banner.bnr -romfs $(ROMFS) -elf $(BUILD)/$(TARGET).elf || cp $(TARGET).3dsx $(TARGET).cia
+	@makerom -f cia -o $(TARGET).cia -exefslogo -rsf $(TARGET).rsf -target t -major 1 -minor 0 -micro 0 -icon $(TARGET).smdh -banner assets/banner.bnr -elf $(BUILD)/$(TARGET).elf || cp $(TARGET).3dsx $(TARGET).cia
 
 $(BUILD)/$(TARGET).elf: $(OBJS)
 	@echo linking ...
