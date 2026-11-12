@@ -21,6 +21,7 @@ ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard
 
 CFLAGS		:=	-Wall -O2 -ffunction-sections \
 			$(ARCH) -DARM11 -D_3DS \
+			-I$(DEVKITPRO)/libctru/include \
 			-I$(PORTLIBS)/include \
 			$(foreach dir,$(INCLUDES),-I$(dir))
 
@@ -28,6 +29,7 @@ CXXFLAGS	:=	$(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 
 ASFLAGS		:=	$(ARCH)
 LDFLAGS		:=	-specs=3dsx.specs $(ARCH) \
+			-L$(DEVKITPRO)/libctru/lib \
 			-L$(PORTLIBS)/lib
 
 LIBS		:=	-lcitro2d -lcitro3d -lctru -lm
