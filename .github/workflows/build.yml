@@ -19,7 +19,8 @@ jobs:
       - name: Install Dependencies
         run: |
           dkp-pacman -Syu --noconfirm
-          dkp-pacman -S --noconfirm 3ds-ctru 3ds-citro3d 3ds-citro2d 3dstools python
+          dkp-pacman -S --noconfirm libctru citro3d citro2d 3dstools
+          pacman -S --noconfirm python || true
 
       - name: Prepare Assets Directory
         run: |
