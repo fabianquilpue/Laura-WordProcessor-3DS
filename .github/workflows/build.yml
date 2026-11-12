@@ -18,18 +18,12 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          dkp-pacman-key --init || true
-          dkp-pacman-key --populate devkitpro || true
-          dkp-pacman -Sy --noconfirm || true
-          dkp-pacman -S --noconfirm dkp-pacman || true
-          dkp-pacman -S --noconfirm 3ds-ctru 3ds-citro3d 3ds-citro2d bannertool smdhtool python python-pillow ttf-dejavu
+          dkp-pacman -Syu --noconfirm
+          dkp-pacman -S --noconfirm 3ds-ctru 3ds-citro3d 3ds-citro2d 3dstools python
 
-      - name: Prepare Assets and Fonts
+      - name: Prepare Assets Directory
         run: |
-          mkdir -p assets/fonts
-          if [ ! -f assets/fonts/typewriter.ttf ]; then
-            cp /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf assets/fonts/typewriter.ttf || true
-          fi
+          mkdir -p assets/fonts data
           python3 tools/generate_assets.py
 
       - name: Compile Homebrew (.3dsx and .cia)
