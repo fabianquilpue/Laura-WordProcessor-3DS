@@ -1,4 +1,3 @@
-
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 #---------------------------------------------------------------------------------
@@ -41,17 +40,12 @@ SFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.s))
 
 OBJS		:=	$(addprefix $(BUILD)/,$(CFILES:.c=.o) $(CPPFILES:.cpp=.o) $(SFILES:.s=.o))
 
-all: $(TARGET).3dsx $(TARGET).cia
+all: $(TARGET).3dsx
 
 $(TARGET).3dsx: $(BUILD)/$(TARGET).elf
 	@echo builtin 3dsx...
 	3dsxtool $< $@
 	@smdhtool --create "Laura Word Processor" "Editor de texto minimalista" "Laura" $(TARGET).smdh || true
-	@bannertool makesmdh -s "Laura Word Processor" -l "Laura" -p "Autor" -i assets/icon.png -o $(TARGET).smdh || true
-
-$(TARGET).cia: $(TARGET).3dsx $(TARGET).smdh
-	@echo builtin cia...
-	@makerom -f cia -o $(TARGET).cia -exefslogo -target t -major 1 -minor 0 -micro 0 -icon $(TARGET).smdh -elf $(BUILD)/$(TARGET).elf
 
 $(BUILD)/$(TARGET).elf: $(OBJS)
 	@echo linking ...
@@ -69,6 +63,6 @@ $(BUILD)/%.o: %.c
 
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(TARGET).cia $(TARGET).bnr
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(TARGET).bnr
 
 .PHONY: all clean
