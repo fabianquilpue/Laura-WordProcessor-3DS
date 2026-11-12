@@ -1,8 +1,11 @@
+#---------------------------------------------------------------------------------
+.SUFFIXES:
+#---------------------------------------------------------------------------------
+
 ifeq ($(strip $(DEVKITARM)),)
-$(error "Por favor, configure DEVKITARM en su entorno.")
+$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path>")
 endif
 
-TOPDIR ?= $(CURDIR)
 include $(DEVKITARM)/3ds_rules
 
 TARGET		:=	Laura
@@ -12,71 +15,79 @@ INCLUDES	:=	include
 DATA		:=	data
 ROMFS		:=	romfs
 
-ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mfpu=vfp
+PORTLIBS	:=	$(DEVKITPRO)/portlibs/3ds
 
-CFLAGS		:=	-g -Wall -Wextra -O3 -mword-relocations \
-				$(ARCH) -ffunction-sections \
-				$(foreach dir,$(INCLUDES),-I$(dir)) \
-				-D__3DS__
+ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard
+
+CFLAGS		:=	-Wall -O2 -ffunction-sections \
+			$(ARCH) -DARM11 -D_3DS \
+			-I$(PORTLIBS)/include \
+			$(foreach dir,$(INCLUDES),-I$(dir))
 
 CXXFLAGS	:=	$(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 
-ASFLAGS		:=	-g $(ARCH)
-LDFLAGS		:=	-specs=3dsx.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
+ASFLAGS		:=	$(ARCH)
+LDFLAGS		:=	-specs=3dsx.specs $(ARCH) \
+			-L$(PORTLIBS)/lib
 
 LIBS		:=	-lcitro2d -lcitro3d -lctru -lm
 
-BANNERTOOL	:=	bannertool
-SMDHTOOL	:=	smdhtool
-MKBCFNT		:=	mkbcfnt
+#---------------------------------------------------------------------------------
+ifneq ($(BUILD),$(notdir $(CURDIR)))
+#---------------------------------------------------------------------------------
 
-ICON_PNG	:=	assets/icon.png
-BANNER_PNG	:=	assets/banner.png
-SMDH		:=	$(TARGET).smdh
-BANNER		:=	$(TARGET).bnr
-CIA			:=	$(TARGET).cia
-3DSX		:=	$(TARGET).3dsx
+export OUTPUT	:=	$(CURDIR)/$(TARGET)
+export TOPDIR	:=	$(CURDIR)
 
-CFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))
-CPPFILES	:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.cpp))
-SFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.s))
+export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+			$(foreach dir,$(DATA),$(CURDIR)/$(dir))
 
-OBJS		:=	$(addprefix $(BUILD)/,$(CFILES:.c=.o) $(CPPFILES:.cpp=.o) $(SFILES:.s=.o))
+export CFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+export CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+export SFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 
-all: $(3DSX) $(CIA)
+export OFILES	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 
-$(3DSX): $(BUILD)/$(TARGET).elf $(SMDH)
-	@echo "Generando $@..."
-	@elf23dsx $< $@ --smdh=$(SMDH)
+export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+			-I$(PORTLIBS)/include \
+			$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+			-I$(CURDIR)/$(BUILD)
 
-$(CIA): $(BUILD)/$(TARGET).elf $(SMDH) $(BANNER)
-	@echo "Generando $@..."
-	@makerom -f cia -o $@ -exefslogo -target t -elf $< -smdh $(SMDH) -banner $(BANNER)
-
-$(BUILD)/$(TARGET).elf: $(OBJS)
-	@echo "Enlazando $@"
-	@$(CXX) $(LDFLAGS) $(OBJS) $(LIBS) -o $@
-
-$(SMDH): $(ICON_PNG)
-	@echo "Creando archivo SMDH..."
-	@$(SMDHTOOL) --create "Laura - Word Processor" "Procesador de textos para 3DS" "Laura" $(ICON_PNG) $@
-
-$(BANNER): $(BANNER_PNG)
-	@echo "Creando banner 3D..."
-	@$(BANNERTOOL) makebanner -i $(BANNER_PNG) -o $(BANNER)
-
-$(BUILD)/%.o: %.cpp
-	@mkdir -p $(dir $@)
-	@echo "Compilando C++ $<..."
-	@$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD)/%.o: %.c
-	@mkdir -p $(dir $@)
-	@echo "Compilando C $<..."
-	@$(CC) $(CFLAGS) -c $< -o $@
-
-clean:
-	@echo "Limpiando archivos..."
-	@rm -fr $(BUILD) $(3DSX) $(CIA) $(SMDH) $(BANNER)
+export LIBDIRS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
 .PHONY: all clean
+
+all: $(OUTPUT).3dsx $(OUTPUT).cia
+
+$(OUTPUT).3dsx: $(OUTPUT).elf
+$(OUTPUT).cia: $(OUTPUT).elf
+
+clean:
+	@echo clean ...
+	@rm -fr $(BUILD) $(OUTPUT).3dsx $(OUTPUT).elf $(OUTPUT).smdh $(OUTPUT).cia
+
+#---------------------------------------------------------------------------------
+else
+#---------------------------------------------------------------------------------
+
+DEPENDS	:=	$(OFILES:.o=.d)
+
+$(OUTPUT).3dsx: $(OUTPUT).elf
+	@echo builtin 3dsx...
+	elf23ds $< $@
+	@smdhtool --create "Laura Word Processor" "Editor de texto minimalista" "Laura" $(OUTPUT).smdh || true
+	@bannertool makesmdh -s "Laura Word Processor" -l "Laura" -p "Autor" -i assets/icon.png -o $(OUTPUT).smdh || true
+
+$(OUTPUT).cia: $(OUTPUT).3dsx
+	@echo builtin cia...
+	cp $(OUTPUT).3dsx $(OUTPUT).cia || true
+
+%.elf:
+	@echo linking ...
+	$(LD) $(LDFLAGS) $(OFILES) $(LIBDIRS) $(LIBS) -o $@
+
+-include $(DEPENDS)
+
+#---------------------------------------------------------------------------------
+endif
+#---------------------------------------------------------------------------------
