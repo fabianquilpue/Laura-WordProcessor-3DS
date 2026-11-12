@@ -16,20 +16,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        run: |
-          dkp-pacman -S --noconfirm devkitpro-keyring || true
-          dkp-pacman -Sy --noconfirm
-          dkp-pacman -S --noconfirm 3ds-portlibs citro2d citro3d libctru 3dstools
-          pacman -S --noconfirm python || true
-
-      - name: Prepare Assets Directory
+      - name: Verify Environment and Build
         run: |
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
-
-      - name: Compile Homebrew (.3dsx and .cia)
-        run: |
           make
 
       - name: Upload Build Artifacts
