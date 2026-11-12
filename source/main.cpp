@@ -49,10 +49,10 @@ int main(int argc, char* argv[]) {
     C2D_TextParse(&headerText, staticBuf, "Laura - Procesador de Texto");
     C2D_TextOptimize(&headerText);
 
-    // 2. Construcción del teclado con teclas más largas/anchas para pulgares (Pantalla inferior 320x240)
+    // 2. Construcción del teclado con teclas largas para pulgares (Pantalla inferior 320x240)
     std::vector<KeyButton> keys;
-    float btnW = 29.5f; // Teclas más largas horizontalmente para mejor puntería con los pulgares
-    float btnH = 24.0f; // Altura cómoda y compacta
+    float btnW = 29.5f; 
+    float btnH = 24.0f; 
     float gap = 2.0f;
 
     // Fila 1: Números (10 teclas: 1 al 0)
@@ -79,17 +79,15 @@ int main(int argc, char* argv[]) {
     }
 
     // Fila 3: A S D F G H J K L Ñ (10 teclas)
-    std::string r3_base  = "asdfghjklñ";
-    std::string r3_shift = "ASDFGHJKLÑ";
+    std::string r3_base[10]  = {"a", "s", "d", "f", "g", "h", "j", "k", "l", "ñ"};
+    std::string r3_shift[10] = {"A", "S", "D", "F", "G", "H", "J", "K", "L", "Ñ"};
     float f3_x = 8.0f;
     float f3_y = f2_y + btnH + 3.0f;
     for (int i = 0; i < 10; i++) {
-        std::string b(1, r3_base[i]);
-        std::string s(1, r3_shift[i]);
-        keys.push_back({f3_x + i * (btnW + gap), f3_y, btnW, btnH, b, s, "", 0});
+        keys.push_back({f3_x + i * (btnW + gap), f3_y, btnW, btnH, r3_base[i], r3_shift[i], "", 0});
     }
 
-    // Fila 4: Z X C V B N M y puntuación base
+    // Fila 4: Z X C V B N M , . -
     std::string r4_base  = "zxcvbnm,.-";
     std::string r4_shift = "ZXCVBNM;:_";
     float f4_x = 8.0f;
@@ -100,12 +98,13 @@ int main(int argc, char* argv[]) {
         keys.push_back({f4_x + i * (btnW + gap), f4_y, btnW, btnH, b, s, "", 0});
     }
 
-    // Fila 5: Franja de puntuación dedicada (« » ¿ ¡ ? ! ; :)
-    std::string puncs[10] = {"«", "»", "¿", "¡", "?", "!", ";", ":", "\"", "'"};
+    // Fila 5: Franja de puntuación exacta (« ¿ ¡ : ; ´ ' ? ! ») (10 teclas)
+    std::string puncs_b[10] = {"«", "¿", "¡", ":", ";", "´", "'", "?", "!", "»"};
+    std::string puncs_s[10] = {"«", "¿", "¡", ":", ";", "¨", "\"", "?", "!", "»"};
     float f5_x = 8.0f;
     float f5_y = f4_y + btnH + 3.0f;
     for (int i = 0; i < 10; i++) {
-        keys.push_back({f5_x + i * (btnW + gap), f5_y, btnW, btnH, puncs[i], puncs[i], "", 0});
+        keys.push_back({f5_x + i * (btnW + gap), f5_y, btnW, btnH, puncs_b[i], puncs_s[i], "", 0});
     }
 
     // Fila 6: Barra Espaciadora amplia y Botón Guardar
@@ -196,7 +195,7 @@ int main(int argc, char* argv[]) {
         C2D_DrawText(&headerText, C2D_WithColor, 10.0f, 4.0f, 0.5f, 0.5f, 0.5f, C2D_Color32(255, 255, 255, 255));
         C2D_DrawText(&docRenderText, C2D_WithColor | C2D_WordWrap, 10.0f, 34.0f, 0.5f, 0.52f, 0.52f, C2D_Color32(30, 30, 30, 255), 380.0f);
 
-        // --- PANTALLA INFERIOR (Teclado con teclas largas para pulgares) ---
+        // --- PANTALLA INFERIOR (Teclado con indicadores visuales de estado alterno) ---
         C2D_TargetClear(bottomScreen, C2D_Color32(220, 225, 235, 255));
         C2D_SceneBegin(bottomScreen);
 
@@ -211,14 +210,32 @@ int main(int argc, char* argv[]) {
 
             C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, colorFondo);
 
+            // Determinar carácter principal activo y variante alterna inactiva
             std::string mainChar = key.base;
-            if (isShift && !key.shift.empty()) mainChar = key.shift;
-            if (key.type > 0) mainChar = key.base; // Etiquetas de espacio/guardar
+            std::string altChar = key.shift;
 
+            if (isShift && !key.shift.empty()) {
+                mainChar = key.shift;
+                altChar = key.base;
+            }
+            if (key.type > 0) {
+                mainChar = key.base;
+            }
+
+            // Dibujar carácter principal centrado (un poco cargado a la derecha/abajo si tiene alterno)
+            float offsetX = (key.type == 0 && !altChar.empty() && altChar != mainChar) ? 2.0f : 0.0f;
             C2D_Text keyLabel;
             C2D_TextParse(&keyLabel, dynamicBuf, mainChar.c_str());
             C2D_TextOptimize(&keyLabel);
-            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + (key.w / 2.0f) - 4.0f, key.y + 4.0f, 0.5f, 0.40f, 0.40f, colorTexto);
+            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + (key.w / 2.0f) - 4.0f + offsetX, key.y + 5.0f, 0.5f, 0.40f, 0.40f, colorTexto);
+
+            // Dibujar estado alterno visual en la esquina superior izquierda
+            if (key.type == 0 && !altChar.empty() && altChar != mainChar) {
+                C2D_Text altLbl;
+                C2D_TextParse(&altLbl, dynamicBuf, altChar.c_str());
+                C2D_TextOptimize(&altLbl);
+                C2D_DrawText(&altLbl, C2D_WithColor, key.x + 2.5f, key.y + 1.5f, 0.5f, 0.23f, 0.23f, C2D_Color32(115, 120, 130, 210));
+            }
         }
 
         // Barra de estado inferior táctil
