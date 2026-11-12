@@ -18,6 +18,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
+          dkp-pacman -S --noconfirm dkp-pacman devkitpro-keyring
           dkp-pacman -Sy --noconfirm
           dkp-pacman -S --noconfirm 3ds-portlibs citro2d citro3d libctru 3dstools
           pacman -S --noconfirm python || true
