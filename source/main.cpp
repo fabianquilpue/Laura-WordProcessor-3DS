@@ -3,13 +3,15 @@
 #include <string>
 #include <vector>
 #include <cstdio>
+#include <sstream>
 
 // Estructura para representar cada tecla virtual en la pantalla inferior
 struct KeyButton {
     float x, y, w, h;
     std::string label;
-    char character;
-    int action; // 0 = carácter normal, 1 = borrar (backspace), 2 = espacio, 3 = guardar
+    std::string charLower;
+    std::string charUpper;
+    int action; // 0 = normal, 1 = borrar, 2 = espacio, 3 = guardar, 4 = shift
 };
 
 // Función para guardar el documento en la tarjeta SD
@@ -19,6 +21,17 @@ bool guardarEnSD(const std::string& contenido) {
     fwrite(contenido.c_str(), 1, contenido.size(), archivo);
     fclose(archivo);
     return true;
+}
+
+// Función auxiliar para contar palabras
+int contarPalabras(const std::string& texto) {
+    std::stringstream ss(texto);
+    std::string palabra;
+    int contador = 0;
+    while (ss >> palabra) {
+        contador++;
+    }
+    return contador;
 }
 
 int main(int argc, char* argv[]) {
@@ -32,7 +45,7 @@ int main(int argc, char* argv[]) {
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 
-    // Buffers de texto estáticos
+    // Buffers de texto
     C2D_TextBuf staticBuf = C2D_TextBufNew(2048);
     C2D_TextBuf dynamicBuf = C2D_TextBufNew(8192);
 
@@ -40,147 +53,162 @@ int main(int argc, char* argv[]) {
     C2D_TextParse(&headerText, staticBuf, "Laura - Procesador de Texto");
     C2D_TextOptimize(&headerText);
 
-    // 3. Configurar la distribución del teclado táctil en la pantalla inferior (320x240)
+    // 3. Configurar el teclado táctil con soporte de mayúsculas/minúsculas
     std::vector<KeyButton> keys;
     
     // Fila 1: Q W E R T Y U I O P
-    std::string row1 = "QWERTYUIOP";
+    std::string r1L = "qwertyuiop";
+    std::string r1U = "QWERTYUIOP";
     float startX = 10.0f;
     float startY = 35.0f;
     float btnW = 28.0f;
-    float btnH = 32.0f;
+    float btnH = 30.0f;
     float gap = 2.0f;
 
-    for (size_t i = 0; i < row1.length(); i++) {
-        keys.push_back({startX + i * (btnW + gap), startY, btnW, btnH, std::string(1, row1[i]), row1[i], 0});
+    for (size_t i = 0; i < r1L.length(); i++) {
+        keys.push_back({startX + i * (btnW + gap), startY, btnW, btnH, std::string(1, r1U[i]), std::string(1, r1L[i]), std::string(1, r1U[i]), 0});
     }
 
     // Fila 2: A S D F G H J K L
-    std::string row2 = "ASDFGHJKL";
+    std::string r2L = "asdfghjkl";
+    std::string r2U = "ASDFGHJKL";
     float startX2 = 20.0f;
-    float startY2 = startY + btnH + 5.0f;
-    for (size_t i = 0; i < row2.length(); i++) {
-        keys.push_back({startX2 + i * (btnW + gap), startY2, btnW, btnH, std::string(1, row2[i]), row2[i], 0});
+    float startY2 = startY + btnH + 4.0f;
+    for (size_t i = 0; i < r2L.length(); i++) {
+        keys.push_back({startX2 + i * (btnW + gap), startY2, btnW, btnH, std::string(1, r2U[i]), std::string(1, r2L[i]), std::string(1, r2U[i]), 0});
     }
 
     // Fila 3: Z X C V B N M y Tecla Borrar
-    std::string row3 = "ZXCVBNM";
-    float startX3 = 35.0f;
-    float startY3 = startY2 + btnH + 5.0f;
-    for (size_t i = 0; i < row3.length(); i++) {
-        keys.push_back({startX3 + i * (btnW + gap), startY3, btnW, btnH, std::string(1, row3[i]), row3[i], 0});
+    std::string r3L = "zxcvbnm";
+    std::string r3U = "ZXCVBNM";
+    float startX3 = 20.0f;
+    float startY3 = startY2 + btnH + 4.0f;
+    for (size_t i = 0; i < r3L.length(); i++) {
+        keys.push_back({startX3 + i * (btnW + gap), startY3, btnW, btnH, std::string(1, r3U[i]), std::string(1, r3L[i]), std::string(1, r3U[i]), 0});
     }
-    // Botón Backspace
-    keys.push_back({startX3 + row3.length() * (btnW + gap), startY3, 45.0f, btnH, "DEL", 0, 1});
+    // Botón Shift y Botón Backspace
+    keys.push_back({startX3 + r3L.length() * (btnW + gap), startY3, 40.0f, btnH, "MAYÚS", "", "", 4});
+    keys.push_back({startX3 + r3L.length() * (btnW + gap) + 42.0f, startY3, 42.0f, btnH, "DEL", "", "", 1});
 
     // Fila 4: Espacio y Botón Guardar
-    float startY4 = startY3 + btnH + 5.0f;
-    keys.push_back({35.0f, startY4, 140.0f, 30.0f, "ESPACIO", ' ', 2});
-    keys.push_back({185.0f, startY4, 95.0f, 30.0f, "GUARDAR", 0, 3});
+    float startY4 = startY3 + btnH + 4.0f;
+    keys.push_back({30.0f, startY4, 130.0f, 28.0f, "ESPACIO", " ", " ", 2});
+    keys.push_back({170.0f, startY4, 110.0f, 28.0f, "GUARDAR", "", "", 3});
 
-    std::string documento = "";
-    std::string estadoMensaje = "Toca las teclas en la pantalla inferior.";
+    std::string documento = "TE AMO LAURITA";
+    std::string estadoMensaje = "Listo para escribir.";
+    bool shifted = false; // Estado de mayúsculas activas por defecto
 
     // 4. Bucle principal de la aplicación
     while (aptMainLoop()) {
         hidScanInput();
         u32 kDown = hidKeysDown();
 
-        // Salir al menú Homebrew presionando START
         if (kDown & KEY_START) break;
 
-        // Leer la posición táctil en la pantalla inferior
         touchPosition touch;
         hidTouchRead(&touch);
 
         if (kDown & KEY_TOUCH) {
-            // Comprobar si el toque colisiona con alguna tecla virtual
-            for (const auto& key : keys) {
+            for (auto& key : keys) {
                 if (touch.px >= key.x && touch.px <= (key.x + key.w) &&
                     touch.py >= key.y && touch.py <= (key.y + key.h)) {
                     
                     if (key.action == 0) { // Carácter normal
-                        documento += key.character;
-                        estadoMensaje = "Tecla presionada: " + key.label;
+                        documento += shifted ? key.charUpper : key.charLower;
+                        estadoMensaje = "Caracter agregado.";
                     } 
-                    else if (key.action == 1) { // Borrar (Backspace)
-                        if (!documento.empty()) {
-                            documento.pop_back();
-                        }
-                        estadoMensaje = "Caracter borrado.";
+                    else if (key.action == 1) { // Borrar
+                        if (!documento.empty()) documento.pop_back();
+                        estadoMensaje = "Ultimo caracter borrado.";
                     } 
                     else if (key.action == 2) { // Espacio
                         documento += " ";
-                        estadoMensaje = "Espacio anadido.";
+                        estadoMensaje = "Espacio.";
                     } 
                     else if (key.action == 3) { // Guardar en SD
                         if (guardarEnSD(documento)) {
                             estadoMensaje = "Guardado en sdmc:/laura_documento.txt";
                         } else {
-                            estadoMensaje = "Error al guardar en SD.";
+                            estadoMensaje = "Error al guardar.";
                         }
+                    }
+                    else if (key.action == 4) { // Tecla MAYÚS / SHIFT
+                        shifted = !shifted;
+                        estadoMensaje = shifted ? "Mayusculas activas." : "Minusculas activas.";
                     }
                     break;
                 }
             }
         }
 
-        // Actualizar textos dinámicos en el buffer
+        // Actualizar textos dinámicos y estadísticas en tiempo real
         C2D_TextBufClear(dynamicBuf);
         C2D_Text docRenderText, statusRenderText;
         
-        const char* textoMostrar = documento.empty() ? "(Comienza a escribir con el lapiz...)" : documento.c_str();
+        const char* textoMostrar = documento.empty() ? "(Escribe con el lapiz...)" : documento.c_str();
         C2D_TextParse(&docRenderText, dynamicBuf, textoMostrar);
         C2D_TextOptimize(&docRenderText);
 
-        C2D_TextParse(&statusRenderText, dynamicBuf, estadoMensaje.c_str());
+        // Calcular conteo en tiempo real
+        int palabras = contarPalabras(documento);
+        int caracteres = documento.length();
+        char infoEstado[128];
+        snprintf(infoEstado, sizeof(infoEstado), "Palabras: %d | Caracteres: %d", palabras, caracteres);
+
+        C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado);
         C2D_TextOptimize(&statusRenderText);
 
-        // Iniciar el fotograma gráfico
+        // Renderizado gráfico
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
-        // --- PANTALLA SUPERIOR (Hoja de documento) ---
-        C2D_TargetClear(topScreen, C2D_Color32(250, 250, 245, 255)); // Fondo papel claro
+        // --- PANTALLA SUPERIOR ---
+        C2D_TargetClear(topScreen, C2D_Color32(250, 250, 245, 255));
         C2D_SceneBegin(topScreen);
 
-        // Barra de título superior
         C2D_DrawRectSolid(0, 0, 0.4f, 400, 24, C2D_Color32(45, 55, 72, 255));
         C2D_DrawText(&headerText, C2D_WithColor, 10.0f, 4.0f, 0.5f, 0.5f, 0.5f, C2D_Color32(255, 255, 255, 255));
-
-        // Texto del documento con ajuste de línea automático
         C2D_DrawText(&docRenderText, C2D_WithColor | C2D_WordWrap, 10.0f, 34.0f, 0.5f, 0.52f, 0.52f, C2D_Color32(30, 30, 30, 255), 380.0f);
 
-        // --- PANTALLA INFERIOR (Teclado Táctil y Estado) ---
-        C2D_TargetClear(bottomScreen, C2D_Color32(230, 235, 242, 255)); // Fondo gris suave
+        // --- PANTALLA INFERIOR ---
+        C2D_TargetClear(bottomScreen, C2D_Color32(230, 235, 242, 255));
         C2D_SceneBegin(bottomScreen);
 
-        // Dibujar cada tecla virtual del teclado
+        // Dibujar teclado táctil dinámico según el estado de MAYÚS
         for (const auto& key : keys) {
             u32 colorFondo = C2D_Color32(255, 255, 255, 255);
             u32 colorTexto = C2D_Color32(30, 30, 35, 255);
 
-            if (key.action == 3) { // Destacar el botón de guardar
+            if (key.action == 3) { // Guardar
                 colorFondo = C2D_Color32(65, 130, 190, 255);
+                colorTexto = C2D_Color32(255, 255, 255, 255);
+            } else if (key.action == 4 && shifted) { // Mayús activo
+                colorFondo = C2D_Color32(100, 180, 100, 255);
                 colorTexto = C2D_Color32(255, 255, 255, 255);
             }
 
             C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, colorFondo);
 
+            std::string etiquetaMostrada = key.label;
+            if (key.action == 0) {
+                etiquetaMostrada = shifted ? key.charUpper : key.charLower;
+            }
+
             C2D_Text keyLabel;
-            C2D_TextParse(&keyLabel, dynamicBuf, key.label.c_str());
+            C2D_TextParse(&keyLabel, dynamicBuf, etiquetaMostrada.c_str());
             C2D_TextOptimize(&keyLabel);
-            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + 6.0f, key.y + 6.0f, 0.5f, 0.42f, 0.42f, colorTexto);
+            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + (key.w / 2.0f) - 4.0f, key.y + 6.0f, 0.5f, 0.40f, 0.40f, colorTexto);
         }
 
-        // Barra de estado inferior
+        // Barra de estadísticas inferior
         C2D_DrawRectSolid(0, 215, 0.4f, 320, 25, C2D_Color32(50, 60, 70, 255));
+        C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado);
+        C2D_TextOptimize(&statusRenderText);
         C2D_DrawText(&statusRenderText, C2D_WithColor, 10.0f, 219.0f, 0.5f, 0.45f, 0.45f, C2D_Color32(255, 255, 255, 255));
 
-        // Finalizar fotograma
         C3D_FrameEnd(0);
     }
 
-    // 5. Liberar recursos al salir
     if (dynamicBuf) C2D_TextBufDelete(dynamicBuf);
     if (staticBuf) C2D_TextBufDelete(staticBuf);
 
