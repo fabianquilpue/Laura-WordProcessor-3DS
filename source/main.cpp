@@ -8,11 +8,10 @@
 // Estructura para representar cada tecla con sus capas
 struct KeyButton {
     float x, y, w, h;
-    std::string label;
     std::string base;
     std::string shift;
     std::string ctrlAlt;
-    int type; // 0 = texto, 1 = borrar, 2 = espacio, 3 = guardar
+    int type; // 0 = texto, 2 = espacio, 3 = guardar
 };
 
 // Función para guardar el documento en la tarjeta SD
@@ -50,77 +49,72 @@ int main(int argc, char* argv[]) {
     C2D_TextParse(&headerText, staticBuf, "Laura - Procesador de Texto");
     C2D_TextOptimize(&headerText);
 
-    // 2. Construcción completa del teclado (Pantalla inferior 320x240) optimizada en filas compactas
+    // 2. Construcción del teclado con teclas más largas/anchas para pulgares (Pantalla inferior 320x240)
     std::vector<KeyButton> keys;
-    float btnW = 27.0f;
-    float btnH = 22.0f; // Altura optimizada para que entren todas las filas
-    float gap = 3.0f;
+    float btnW = 29.5f; // Teclas más largas horizontalmente para mejor puntería con los pulgares
+    float btnH = 24.0f; // Altura cómoda y compacta
+    float gap = 2.0f;
 
     // Fila 1: Números (10 teclas: 1 al 0)
     std::string r1_base  = "1234567890";
     std::string r1_shift = "!\"#$%&/()=";
-    float f1_x = 10.0f;
+    float f1_x = 8.0f;
     float f1_y = 12.0f;
     for (int i = 0; i < 10; i++) {
         std::string b(1, r1_base[i]);
         std::string s(1, r1_shift[i]);
-        keys.push_back({f1_x + i * (btnW + gap), f1_y, btnW, btnH, b, b, s, "", 0});
+        keys.push_back({f1_x + i * (btnW + gap), f1_y, btnW, btnH, b, s, "", 0});
     }
 
     // Fila 2: Q W E R T Y U I O P (10 teclas)
     std::string r2_base  = "qwertyuiop";
     std::string r2_shift = "QWERTYUIOP";
-    float f2_x = 10.0f;
+    float f2_x = 8.0f;
     float f2_y = f1_y + btnH + 3.0f;
     for (int i = 0; i < 10; i++) {
         std::string b(1, r2_base[i]);
         std::string s(1, r2_shift[i]);
         std::string c = (r2_base[i] == 'e') ? "@" : "";
-        keys.push_back({f2_x + i * (btnW + gap), f2_y, btnW, btnH, b, b, s, c, 0});
+        keys.push_back({f2_x + i * (btnW + gap), f2_y, btnW, btnH, b, s, c, 0});
     }
 
-    // Fila 3: A S D F G H J K L Ñ (11 teclas incluyendo la Ñ explícita)
+    // Fila 3: A S D F G H J K L Ñ (10 teclas)
     std::string r3_base  = "asdfghjklñ";
     std::string r3_shift = "ASDFGHJKLÑ";
-    float f3_x = 6.0f;
+    float f3_x = 8.0f;
     float f3_y = f2_y + btnH + 3.0f;
     for (int i = 0; i < 10; i++) {
         std::string b(1, r3_base[i]);
         std::string s(1, r3_shift[i]);
-        keys.push_back({f3_x + i * (btnW + gap), f3_y, btnW, btnH, b, b, s, "", 0});
+        keys.push_back({f3_x + i * (btnW + gap), f3_y, btnW, btnH, b, s, "", 0});
     }
-    // Tecla Ñ agregada como carácter literal para asegurar su reconocimiento perfecto
-    keys.push_back({f3_x + 10 * (btnW + gap), f3_y, 30.0f, btnH, "ñ", "ñ", "Ñ", "", 0});
 
-    // Fila 4: Z X C V B N M , . - y Backspace
+    // Fila 4: Z X C V B N M y puntuación base
     std::string r4_base  = "zxcvbnm,.-";
     std::string r4_shift = "ZXCVBNM;:_";
-    float f4_x = 10.0f;
+    float f4_x = 8.0f;
     float f4_y = f3_y + btnH + 3.0f;
-    for (int i = 0; i < 9; i++) {
+    for (int i = 0; i < 10; i++) {
         std::string b(1, r4_base[i]);
         std::string s(1, r4_shift[i]);
-        keys.push_back({f4_x + i * (btnW + gap), f4_y, btnW, btnH, b, b, s, "", 0});
+        keys.push_back({f4_x + i * (btnW + gap), f4_y, btnW, btnH, b, s, "", 0});
     }
-    // Botón Backspace
-    keys.push_back({f4_x + 9 * (btnW + gap), f4_y, 35.0f, btnH, "DEL", "DEL", "DEL", "DEL", 1});
 
-    // Fila 5: Franja de puntuación extra (« , . … : ; - — »)
-    std::string puncs[8] = {"«", "»", "¿", "¡", "?", "!", ";", ":"};
-    float f5_x = 10.0f;
+    // Fila 5: Franja de puntuación dedicada (« » ¿ ¡ ? ! ; :)
+    std::string puncs[10] = {"«", "»", "¿", "¡", "?", "!", ";", ":", "\"", "'"};
+    float f5_x = 8.0f;
     float f5_y = f4_y + btnH + 3.0f;
-    for (int i = 0; i < 8; i++) {
-        keys.push_back({f5_x + i * (32.0f + gap), f5_y, 32.0f, btnH, puncs[i], puncs[i], puncs[i], puncs[i], 0});
+    for (int i = 0; i < 10; i++) {
+        keys.push_back({f5_x + i * (btnW + gap), f5_y, btnW, btnH, puncs[i], puncs[i], "", 0});
     }
 
-    // Fila 6: Barra Espaciadora y Botón Guardar
+    // Fila 6: Barra Espaciadora amplia y Botón Guardar
     float f6_y = f5_y + btnH + 3.0f;
-    keys.push_back({10.0f, f6_y, 170.0f, 22.0f, "ESPACIO", "ESPACIO", "TAB", " ", 2});
-    keys.push_back({190.0f, f6_y, 120.0f, 22.0f, "GUARDAR", "GUARDAR", "GUARDAR", "GUARDAR", 3});
+    keys.push_back({8.0f, f6_y, 185.0f, 25.0f, "ESPACIO", "TAB", " ", 2});
+    keys.push_back({198.0f, f6_y, 114.0f, 25.0f, "GUARDAR", "GUARDAR", "GUARDAR", 3});
 
-    // Documento inicia completamente en blanco
     std::string documento = "";
-    std::string estadoMensaje = "Listo para escribir.";
+    std::string estadoMensaje = "Usa ZR para borrar. Listo.";
 
     // 3. Bucle principal de la aplicación
     while (aptMainLoop()) {
@@ -132,6 +126,14 @@ int main(int argc, char* argv[]) {
 
         bool isShift = (kHeld & KEY_L);
         bool isCtrlAlt = (kHeld & KEY_R);
+
+        // Borrado continuo o pulsado con el gatillo ZR
+        if ((kDown & KEY_ZR) || (kHeld & KEY_ZR)) {
+            if (!documento.empty()) {
+                documento.pop_back();
+                estadoMensaje = "Borrado con ZR.";
+            }
+        }
 
         touchPosition touch;
         hidTouchRead(&touch);
@@ -149,16 +151,12 @@ int main(int argc, char* argv[]) {
                         documento += charToAdd;
                         estadoMensaje = "Agregado: " + charToAdd;
                     } 
-                    else if (key.type == 1) { // Backspace
-                        if (!documento.empty()) documento.pop_back();
-                        estadoMensaje = "Caracter borrado.";
-                    } 
-                    else if (key.type == 2) { // Espacio / Tab
+                    else if (key.type == 2) { // Espacio / Tab con Shift
                         if (isShift) documento += "\t";
                         else documento += " ";
                         estadoMensaje = isShift ? "Tabulacion." : "Espacio.";
                     } 
-                    else if (key.type == 3) { // Guardar
+                    else if (key.type == 3) { // Guardar en SD
                         if (guardarEnSD(documento)) {
                             estadoMensaje = "Guardado en sdmc:/laura_documento.txt";
                         } else {
@@ -181,7 +179,7 @@ int main(int argc, char* argv[]) {
         int palabras = contarPalabras(documento);
         int caracteres = documento.length();
         char infoEstado[128];
-        snprintf(infoEstado, sizeof(infoEstado), "Palabras: %d | Caracteres: %d | L(Shift): %s", 
+        snprintf(infoEstado, sizeof(infoEstado), "Palabras: %d | Caracteres: %d | Shift(L): %s", 
                  palabras, caracteres, isShift ? "ON" : "OFF");
 
         C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado);
@@ -198,7 +196,7 @@ int main(int argc, char* argv[]) {
         C2D_DrawText(&headerText, C2D_WithColor, 10.0f, 4.0f, 0.5f, 0.5f, 0.5f, C2D_Color32(255, 255, 255, 255));
         C2D_DrawText(&docRenderText, C2D_WithColor | C2D_WordWrap, 10.0f, 34.0f, 0.5f, 0.52f, 0.52f, C2D_Color32(30, 30, 30, 255), 380.0f);
 
-        // --- PANTALLA INFERIOR (Teclado Completo y Puntuación) ---
+        // --- PANTALLA INFERIOR (Teclado con teclas largas para pulgares) ---
         C2D_TargetClear(bottomScreen, C2D_Color32(220, 225, 235, 255));
         C2D_SceneBegin(bottomScreen);
 
@@ -206,7 +204,7 @@ int main(int argc, char* argv[]) {
             u32 colorFondo = C2D_Color32(255, 255, 255, 255);
             u32 colorTexto = C2D_Color32(30, 30, 35, 255);
 
-            if (key.type == 3) { // Guardar
+            if (key.type == 3) { // Guardar destacado
                 colorFondo = C2D_Color32(65, 130, 190, 255);
                 colorTexto = C2D_Color32(255, 255, 255, 255);
             }
@@ -214,13 +212,13 @@ int main(int argc, char* argv[]) {
             C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, colorFondo);
 
             std::string mainChar = key.base;
-            if (isShift) mainChar = key.shift;
-            if (key.type > 0) mainChar = key.label;
+            if (isShift && !key.shift.empty()) mainChar = key.shift;
+            if (key.type > 0) mainChar = key.base; // Etiquetas de espacio/guardar
 
             C2D_Text keyLabel;
             C2D_TextParse(&keyLabel, dynamicBuf, mainChar.c_str());
             C2D_TextOptimize(&keyLabel);
-            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + (key.w / 2.0f) - 3.0f, key.y + 3.0f, 0.5f, 0.35f, 0.35f, colorTexto);
+            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + (key.w / 2.0f) - 4.0f, key.y + 4.0f, 0.5f, 0.40f, 0.40f, colorTexto);
         }
 
         // Barra de estado inferior táctil
