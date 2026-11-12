@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     // Buffer de texto y objeto de texto para la fuente por defecto del sistema
     C2D_TextBuf textBuf = C2D_TextBufNew(4096);
     C2D_Text titleText;
-    C2D_TextParse(&titleText, textBuf, "Laura - Procesador de Texto (Sistema)");
+    C2D_TextParse(&titleText, textBuf, "Laura - Procesador de Texto");
     C2D_TextOptimize(&titleText);
 
     // 3. Bucle principal de la aplicación
@@ -28,22 +28,22 @@ int main(int argc, char* argv[]) {
         // Salir de la aplicación presionando el botón START
         if (kDown & KEY_START) break;
 
-        // Iniciar el fotograma gráfico
+        // Iniciar el fotograma gráfico general
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         
         // --- Pantalla Superior ---
-        C2D_TargetClear(topScreen, C2D_Color32(40, 40, 50, 255)); // Fondo gris oscuro
+        C2D_TargetClear(topScreen, C2D_Color32(240, 240, 245, 255)); // Fondo gris muy claro / blanco suave
         C2D_SceneBegin(topScreen);
         
-        // Dibujar el título utilizando la fuente por defecto del sistema
-        C2D_DrawText(&titleText, C2D_WithColor, 16.0f, 16.0f, 0.5f, 0.65f, 0.65f, C2D_Color32(255, 255, 255, 255));
+        // Dibujar el título utilizando la fuente por defecto del sistema (en color oscuro para contraste)
+        C2D_DrawText(&titleText, C2D_WithColor, 16.0f, 16.0f, 0.5f, 0.65f, 0.65f, C2D_Color32(30, 30, 30, 255));
 
         // --- Pantalla Inferior ---
-        C2D_TargetClear(bottomScreen, C2D_Color32(30, 30, 40, 255));
+        C2D_TargetClear(bottomScreen, C2D_Color32(230, 230, 235, 255)); // Fondo claro para la zona de escritura
         C2D_SceneBegin(bottomScreen);
-        // Zona de edición o controles limpios sin menús de fuentes
+        // Aquí añadiremos posteriormente los controles táctiles del editor
 
-        // Finalizar el fotograma
+        // Finalizar el fotograma y sincronizar el dibujado
         C3D_FrameEnd(0);
     }
 
