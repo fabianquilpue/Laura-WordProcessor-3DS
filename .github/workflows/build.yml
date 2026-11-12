@@ -1,1 +1,35 @@
 
+name: Build Laura - Word Processor 3DS
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Laura 3DS
+        run: |
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=/opt/devkitpro/devkitARM
+          
+          mkdir -p assets/fonts data
+          python3 tools/generate_assets.py
+          make
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Laura-WordProcessor-3DS
+          path: |
+            Laura.3dsx
+            Laura.smdh
