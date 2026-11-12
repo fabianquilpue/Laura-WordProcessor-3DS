@@ -18,8 +18,16 @@ jobs:
 
       - name: Build Laura 3DS
         run: |
-          # Asegurar que las herramientas de devkitPro (como elf23ds) estén en el PATH
-          export PATH=/opt/devkitpro/tools/bin:$PATH
+          # Buscar dónde está instalado elf23ds en todo el sistema e incluirlo en el PATH
+          ELF23DS_PATH=$(find /opt/devkitpro -name "elf23ds" 2>/dev/null || true)
+          if [ -n "$ELF23DS_PATH" ]; then
+            export PATH="$(dirname "$ELF23DS_PATH"):$PATH"
+            echo "Encontrado elf23ds en: $(dirname "$ELF23DS_PATH")"
+          else
+            echo "Advertencia: elf23ds no encontrado mediante find, buscando herramientas alternativas..."
+            export PATH=/opt/devkitpro/tools/bin:/opt/devkitpro/portlibs/3ds/bin:$PATH
+          fi
+
           export DEVKITPRO=/opt/devkitpro
           export DEVKITARM=/opt/devkitpro/devkitARM
           
