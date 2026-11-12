@@ -19,7 +19,7 @@ jobs:
       - name: Install Dependencies
         run: |
           pacman -Syu --noconfirm || true
-          pacman -S --noconfirm 3ds-bannertool 3ds-smdhtool 3ds-tools python python-pillow ttf-dejavu || true
+          pacman -S --noconfirm 3ds-ctru 3ds-citro3d 3ds-citro2d 3ds-bannertool 3ds-smdhtool python python-pillow ttf-dejavu || true
 
       - name: Prepare Assets and Fonts
         run: |
