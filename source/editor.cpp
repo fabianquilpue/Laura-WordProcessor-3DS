@@ -1,6 +1,6 @@
 #include "editor.hpp"
 #include <citro2d.h>
-#include <ctru.h>
+#include <3ds.h>
 
 Editor::Editor() {
     content = "Laura Word Processor - Listo para escribir.";
