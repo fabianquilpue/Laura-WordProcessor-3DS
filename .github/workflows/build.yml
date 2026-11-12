@@ -20,7 +20,7 @@ jobs:
         run: |
           dkp-pacman -S --noconfirm dkp-pacman devkitpro-keyring || true
           dkp-pacman -Syu --noconfirm || true
-          dkp-pacman -S --noconfirm citro2d citro3d libctru 3dstools
+          dkp-pacman -S --noconfirm 3ds-portlibs citro2d citro3d libctru 3dstools
           pacman -S --noconfirm python || true
 
       - name: Prepare Assets Directory
