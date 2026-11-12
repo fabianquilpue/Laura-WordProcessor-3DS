@@ -25,35 +25,24 @@ jobs:
           mkdir -p /opt/devkitpro/portlibs/3ds/include /opt/devkitpro/portlibs/3ds/lib
           mkdir -p /opt/devkitpro/libctru/include /opt/devkitpro/libctru/lib
           
-          # Descargar e instalar libctru con manejo seguro de rutas
+          # Descargar e instalar libctru de forma controlada
           echo "Descargando libctru..."
-          curl -sL https://github.com/devkitPro/libctru/archive/refs/heads/master.tar.gz | tar -xz
-          EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "libctru-*")
-          if [ -d "$EXTRACTED_DIR/include" ]; then
-            cp -r $EXTRACTED_DIR/include/* /opt/devkitpro/libctru/include/
-          fi
-          if [ -d "$EXTRACTED_DIR/lib" ]; then
-            cp -r $EXTRACTED_DIR/lib/* /opt/devkitpro/libctru/lib/ || true
-          fi
-          rm -rf libctru-*
+          curl -sL https://github.com/devkitPro/libctru/archive/refs/heads/master.tar.gz | tar -xz -f -
+          cp -r libctru-master/include/* /opt/devkitpro/libctru/include/
+          [ -d libctru-master/lib ] && cp -r libctru-master/lib/* /opt/devkitpro/libctru/lib/ || true
+          rm -rf libctru-master
 
-          # Descargar citro2d
+          # Descargar citro2d de forma controlada
           echo "Descargando citro2d..."
-          curl -sL https://github.com/devkitPro/citro2d/archive/refs/heads/master.tar.gz | tar -xz
-          EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "citro2d-*")
-          if [ -d "$EXTRACTED_DIR/include" ]; then
-            cp -r $EXTRACTED_DIR/include/* /opt/devkitpro/portlibs/3ds/include/
-          fi
-          rm -rf citro2d-*
+          curl -sL https://github.com/devkitPro/citro2d/archive/refs/heads/master.tar.gz | tar -xz -f -
+          cp -r citro2d-master/include/* /opt/devkitpro/portlibs/3ds/include/
+          rm -rf citro2d-master
 
-          # Descargar citro3d
+          # Descargar citro3d de forma controlada
           echo "Descargando citro3d..."
-          curl -sL https://github.com/devkitPro/citro3d/archive/refs/heads/master.tar.gz | tar -xz
-          EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "citro3d-*")
-          if [ -d "$EXTRACTED_DIR/include" ]; then
-            cp -r $EXTRACTED_DIR/include/* /opt/devkitpro/portlibs/3ds/include/
-          fi
-          rm -rf citro3d-*
+          curl -sL https://github.com/devkitPro/citro3d/archive/refs/heads/master.tar.gz | tar -xz -f -
+          cp -r citro3d-master/include/* /opt/devkitpro/portlibs/3ds/include/
+          rm -rf citro3d-master
 
           export DEVKITPRO=/opt/devkitpro
           export DEVKITARM=/opt/devkitpro/devkitARM
