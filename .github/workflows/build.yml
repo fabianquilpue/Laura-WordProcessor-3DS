@@ -21,29 +21,39 @@ jobs:
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
           
-          # Limpiar y recrear directorios para evitar estados corruptos
-          rm -rf /opt/devkitpro/libctru /opt/devkitpro/portlibs/3ds
+          # Crear directorios de portlibs y libctru de forma segura
           mkdir -p /opt/devkitpro/portlibs/3ds/include /opt/devkitpro/portlibs/3ds/lib
           mkdir -p /opt/devkitpro/libctru/include /opt/devkitpro/libctru/lib
           
-          # Descargar e instalar libctru
-          echo "Descargando e instalando libctru..."
+          # Descargar e instalar libctru con manejo seguro de rutas
+          echo "Descargando libctru..."
           curl -sL https://github.com/devkitPro/libctru/archive/refs/heads/master.tar.gz | tar -xz
-          cp -r libctru-master/include/* /opt/devkitpro/libctru/include/
-          [ -d libctru-master/lib ] && cp -r libctru-master/lib/* /opt/devkitpro/libctru/lib/ || true
-          rm -rf libctru-master
+          EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "libctru-*")
+          if [ -d "$EXTRACTED_DIR/include" ]; then
+            cp -r $EXTRACTED_DIR/include/* /opt/devkitpro/libctru/include/
+          fi
+          if [ -d "$EXTRACTED_DIR/lib" ]; then
+            cp -r $EXTRACTED_DIR/lib/* /opt/devkitpro/libctru/lib/ || true
+          fi
+          rm -rf libctru-*
 
           # Descargar citro2d
           echo "Descargando citro2d..."
           curl -sL https://github.com/devkitPro/citro2d/archive/refs/heads/master.tar.gz | tar -xz
-          cp -r citro2d-master/include/* /opt/devkitpro/portlibs/3ds/include/ || true
-          rm -rf citro2d-master
+          EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "citro2d-*")
+          if [ -d "$EXTRACTED_DIR/include" ]; then
+            cp -r $EXTRACTED_DIR/include/* /opt/devkitpro/portlibs/3ds/include/
+          fi
+          rm -rf citro2d-*
 
           # Descargar citro3d
           echo "Descargando citro3d..."
           curl -sL https://github.com/devkitPro/citro3d/archive/refs/heads/master.tar.gz | tar -xz
-          cp -r citro3d-master/include/* /opt/devkitpro/portlibs/3ds/include/ || true
-          rm -rf citro3d-master
+          EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "citro3d-*")
+          if [ -d "$EXTRACTED_DIR/include" ]; then
+            cp -r $EXTRACTED_DIR/include/* /opt/devkitpro/portlibs/3ds/include/
+          fi
+          rm -rf citro3d-*
 
           export DEVKITPRO=/opt/devkitpro
           export DEVKITARM=/opt/devkitpro/devkitARM
