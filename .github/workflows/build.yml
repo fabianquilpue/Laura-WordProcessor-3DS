@@ -18,8 +18,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          dkp-pacman -Syu --noconfirm || true
-          dkp-pacman -S --noconfirm 3ds-ctru 3ds-citro3d 3ds-citro2d 3ds-bannertool 3ds-smdhtool python python-pillow ttf-dejavu || true
+          dkp-pacman -Syu --noconfirm
+          dkp-pacman -S --noconfirm 3ds-dev 3ds-bannertool 3ds-smdhtool python python-pillow ttf-dejavu
 
       - name: Prepare Assets and Fonts
         run: |
