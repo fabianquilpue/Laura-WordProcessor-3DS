@@ -108,8 +108,11 @@ bool guardarEnRTF(const std::vector<StyledChar>& doc, std::string& ultimaHoraGua
         else {
             uint32_t cp = utf8ToCodepoint(sc.glyph);
             if (cp < 128) fputc(static_cast<char>(cp), archivo);
-            else if (cp <= 0xFFFF) fprintf(archivo, "\\u%u?", cp);
-            else { cp -= 0x10000; fprintf(archivo, "\\u%u?\\u%u?", 0xD800 + (cp >> 10), 0xDC00 + (cp & 0x3FF)); }
+            else if (cp <= 0xFFFF) fprintf(archivo, "\\u%lu?", (unsigned long)cp);
+            else { 
+                cp -= 0x10000; 
+                fprintf(archivo, "\\u%lu?\\u%lu?", (unsigned long)(0xD800 + (cp >> 10)), (unsigned long)(0xDC00 + (cp & 0x3FF))); 
+            }
         }
         byteOffset += sc.glyph.size();
         i++;
@@ -149,16 +152,22 @@ std::string aplicarTeclaMuerta(char vocal, int tipoMuerta) {
     bool esMayuscula = (vocal >= 'A' && vocal <= 'Z');
     char vLower = esMayuscula ? (vocal + 32) : vocal;
     if (tipoMuerta == 1) {
-        if (vLower == 'a') return esMayuscula ? "Á" : "á"; if (vLower == 'e') return esMayuscula ? "É" : "é";
-        if (vLower == 'i') return esMayuscula ? "Í" : "í"; if (vLower == 'o') return esMayuscula ? "Ó" : "ó";
+        if (vLower == 'a') return esMayuscula ? "Á" : "á";
+        if (vLower == 'e') return esMayuscula ? "É" : "é";
+        if (vLower == 'i') return esMayuscula ? "Í" : "í";
+        if (vLower == 'o') return esMayuscula ? "Ó" : "ó";
         if (vLower == 'u') return esMayuscula ? "Ú" : "ú";
     } else if (tipoMuerta == 2) {
-        if (vLower == 'a') return esMayuscula ? "Ä" : "ä"; if (vLower == 'e') return esMayuscula ? "Ë" : "ë";
-        if (vLower == 'i') return esMayuscula ? "Ï" : "ï"; if (vLower == 'o') return esMayuscula ? "Ö" : "ö";
+        if (vLower == 'a') return esMayuscula ? "Ä" : "ä";
+        if (vLower == 'e') return esMayuscula ? "Ë" : "ë";
+        if (vLower == 'i') return esMayuscula ? "Ï" : "ï";
+        if (vLower == 'o') return esMayuscula ? "Ö" : "ö";
         if (vLower == 'u') return esMayuscula ? "Ü" : "ü";
     } else if (tipoMuerta == 3) {
-        if (vLower == 'a') return esMayuscula ? "À" : "à"; if (vLower == 'e') return esMayuscula ? "È" : "è";
-        if (vLower == 'i') return esMayuscula ? "Ì" : "ì"; if (vLower == 'o') return esMayuscula ? "Ò" : "ò";
+        if (vLower == 'a') return esMayuscula ? "À" : "à";
+        if (vLower == 'e') return esMayuscula ? "È" : "è";
+        if (vLower == 'i') return esMayuscula ? "Ì" : "ì";
+        if (vLower == 'o') return esMayuscula ? "Ò" : "ò";
         if (vLower == 'u') return esMayuscula ? "Ù" : "ù";
     }
     std::string res = (tipoMuerta == 1 ? "´" : (tipoMuerta == 2 ? "¨" : "`"));
@@ -348,8 +357,7 @@ int main(int argc, char* argv[]) {
         bool isZRHeld = (kHeld & KEY_ZR);
         bool isSelectHeld = (kHeld & KEY_SELECT);
 
-        // Modificadoras independientes para cortar/copiar/pegar
-        bool cutModHeld = isLHeld || isZRHeld; // L o ZR permiten Cortar al usar Y
+        bool cutModHeld = isLHeld || isZRHeld;
 
         if (kDown & KEY_SELECT) {
             isSelectModeToggle = !isSelectModeToggle;
@@ -373,10 +381,6 @@ int main(int argc, char* argv[]) {
             if (kHeld & KEY_DDOWN) moveCursorDown(selecting, isLHeld);
         }
 
-        // UNDO / REDO con B:
-        // - B solo: Undo de 1 paso
-        // - L + B: Undo múltiple de 5 pasos
-        // - ZL + B: Redo de 1 paso
         bool triggerB = false;
         if (kDown & KEY_B) { triggerB = true; undoCooldown = INITIAL_DELAY; }
         else if (kHeld & KEY_B) {
@@ -387,21 +391,18 @@ int main(int argc, char* argv[]) {
         if (triggerB) {
             hasSelection = false; isSelectModeToggle = false;
             if (isZLHeld) {
-                // REDO de 1 paso
                 if (!redoStack.empty()) {
                     undoStack.push_back({documento, cursorPos});
                     EditorState st = redoStack.back(); redoStack.pop_back();
                     documento = st.doc; cursorPos = std::min(st.cursor, documento.size());
                 }
             } else if (isLHeld) {
-                // UNDO múltiple de 5 pasos
                 for (int step = 0; step < 5 && !undoStack.empty(); step++) {
                     redoStack.push_back({documento, cursorPos});
                     EditorState st = undoStack.back(); undoStack.pop_back();
                     documento = st.doc; cursorPos = std::min(st.cursor, documento.size());
                 }
             } else {
-                // UNDO de 1 paso
                 if (!undoStack.empty()) {
                     redoStack.push_back({documento, cursorPos});
                     EditorState st = undoStack.back(); undoStack.pop_back();
@@ -410,7 +411,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // COPIAR / CORTAR (Y) -> L o ZR independiente actúan como CORTAR
         if (kDown & KEY_Y) {
             if (hasSelection && selAnchor != cursorPos) {
                 size_t start = std::min(selAnchor, cursorPos);
@@ -425,7 +425,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // PEGAR (A) -> ZL pega sin formato (hereda el estilo activo actual del cursor)
         if (kDown & KEY_A) {
             if (!portapapeles.empty()) {
                 pushUndo(); deleteSelectionIfAny();
@@ -439,7 +438,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // BACKSPACE (ZR)
         bool isBackspaceTrigger = false;
         if (kDown & KEY_ZR) { isBackspaceTrigger = true; bsCooldown = INITIAL_DELAY; }
         else if (kHeld & KEY_ZR) {
@@ -468,7 +466,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // ENTER (R)
         if (kDown & KEY_R) {
             pushUndo(); deleteSelectionIfAny();
             std::string ins = isZLHeld ? "\n--- [PAGINA NUEVA] ---\n" : "\n";
@@ -477,7 +474,6 @@ int main(int argc, char* argv[]) {
             cursorPos += styledIns.size();
         }
 
-        // TÁCTIL
         touchPosition touch;
         hidTouchRead(&touch);
 
@@ -543,8 +539,4 @@ int main(int argc, char* argv[]) {
                 else if (effectiveShift && !key.shift.empty()) charToAdd = key.shift;
 
                 if (estadoTeclaMuerta > 0 && charToAdd.length() == 1 && ((charToAdd[0] >= 'a' && charToAdd[0] <= 'z') || (charToAdd[0] >= 'A' && charToAdd[0] <= 'Z'))) {
-                    std::string acc = aplicarTeclaMuerta(charToAdd[0], estadoTeclaMuerta);
-                    documento.insert(documento.begin() + cursorPos, {acc, activeStyle});
-                    cursorPos++; estadoTeclaMuerta = 0;
-                } else {
-                    if (
+                    std::string acc = aplicarTeclaMuerta(charToAdd[0], estado
