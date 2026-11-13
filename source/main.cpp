@@ -16,6 +16,7 @@ struct KeyButton {
     int type; // 0 = texto, 2 = espacio, 3 = guardar, 4 = tecla muerta, 5 = formato (N/K/S)
 };
 
+// Utilidades UTF-8 para mover el cursor y borrar sin partir tildes, ñ, €, etc.
 size_t utf8PrevChar(const std::string& str, size_t pos) {
     if (pos == 0) return 0;
     pos--;
@@ -48,6 +49,7 @@ bool isLetterKey(const std::string& base) {
     return (base.size() == 1 && base[0] >= 'a' && base[0] <= 'z');
 }
 
+// Guardar en SD y registrar hora
 bool guardarEnSD(const std::string& contenido, std::string& ultimaHoraGuardado) {
     FILE* archivo = fopen("sdmc:/laura_documento.txt", "w");
     if (!archivo) return false;
@@ -124,7 +126,7 @@ int main(int argc, char* argv[]) {
     float btnH = 22.0f; 
     float gap = 2.0f;
 
-    // Fila superior de Formato en español: N (Negrita), K (Cursiva), S (Subrayado / Tachado)
+    // Fila superior
     float fmt_y = 6.0f;
     float fmt_w = 98.0f;
     keys.push_back({8.0f, fmt_y, fmt_w, 18.0f, "N", "N", "N", 5});
@@ -188,8 +190,12 @@ int main(int argc, char* argv[]) {
 
     std::string documento = "";
     size_t cursorPos = 0;
+    
+    // Selección mejorada
     bool hasSelection = false;
+    bool isSelectModeToggle = false;
     size_t selAnchor = 0;
+    
     std::string portapapeles = "";
     std::string ultimaHoraGuardado = "--:--";
 
@@ -206,6 +212,7 @@ int main(int argc, char* argv[]) {
     auto deleteSelectionIfAny = [&]() -> bool {
         if (!hasSelection || selAnchor == cursorPos) {
             hasSelection = false;
+            isSelectModeToggle = false;
             return false;
         }
         size_t start = std::min(selAnchor, cursorPos);
@@ -213,6 +220,7 @@ int main(int argc, char* argv[]) {
         documento.erase(start, end - start);
         cursorPos = start;
         hasSelection = false;
+        isSelectModeToggle = false;
         return true;
     };
 
@@ -236,501 +244,12 @@ int main(int argc, char* argv[]) {
     int dpadCooldown = 0;
     int undoCooldown = 0;
 
-    auto moveCursorLeft = [&](bool selecting) {
+    // Navegación con salto (jump) incorporado
+    auto moveCursorLeft = [&](bool selecting, bool jump) {
         if (selecting && !hasSelection) { hasSelection = true; selAnchor = cursorPos; }
         if (!selecting) hasSelection = false;
-        cursorPos = utf8PrevChar(documento, cursorPos);
-    };
-
-    auto moveCursorRight = [&](bool selecting) {
-        if (selecting && !hasSelection) { hasSelection = true; selAnchor = cursorPos; }
-        if (!selecting) hasSelection = false;
-        cursorPos = utf8NextChar(documento, cursorPos);
-    };
-
-    auto moveCursorUp = [&](bool selecting) {
-        if (selecting && !hasSelection) { hasSelection = true; selAnchor = cursorPos; }
-        if (!selecting) hasSelection = false;
-        size_t lineStart = documento.rfind('\n', cursorPos == 0 ? 0 : cursorPos - 1);
-        if (lineStart == std::string::npos) {
-            cursorPos = 0;
-            return;
-        }
-        size_t colBytes = cursorPos - (lineStart + 1);
-        size_t prevLineStart = (lineStart == 0) ? std::string::npos : documento.rfind('\n', lineStart - 1);
-        size_t targetStart = (prevLineStart == std::string::npos) ? 0 : prevLineStart + 1;
-        size_t prevLineLen = lineStart - targetStart;
-        cursorPos = targetStart + std::min(colBytes, prevLineLen);
-        while (cursorPos > targetStart && (static_cast<unsigned char>(documento[cursorPos]) & 0xC0) == 0x80) cursorPos--;
-    };
-
-    auto moveCursorDown = [&](bool selecting) {
-        if (selecting && !hasSelection) { hasSelection = true; selAnchor = cursorPos; }
-        if (!selecting) hasSelection = false;
-        size_t lineStart = (cursorPos == 0) ? std::string::npos : documento.rfind('\n', cursorPos - 1);
-        size_t actualStart = (lineStart == std::string::npos) ? 0 : lineStart + 1;
-        size_t colBytes = cursorPos - actualStart;
-        size_t nextNewline = documento.find('\n', cursorPos);
-        if (nextNewline == std::string::npos) {
-            cursorPos = documento.size();
-            return;
-        }
-        size_t nextLineStart = nextNewline + 1;
-        size_t nextLineEnd = documento.find('\n', nextLineStart);
-        if (nextLineEnd == std::string::npos) nextLineEnd = documento.size();
-        size_t nextLineLen = nextLineEnd - nextLineStart;
-        cursorPos = nextLineStart + std::min(colBytes, nextLineLen);
-        while (cursorPos > nextLineStart && (static_cast<unsigned char>(documento[cursorPos]) & 0xC0) == 0x80) cursorPos--;
-    };
-
-    while (aptMainLoop()) {
-        hidScanInput();
-        u32 kDown = hidKeysDown();
-        u32 kHeld = hidKeysHeld();
-
-        if (kDown & KEY_START) break;
-
-        if (kDown & KEY_X) {
-            showTopInfoBar = !showTopInfoBar;
-        }
-
-        if (kDown & KEY_L) {
-            u64 currentTick = osGetTime();
-            if (currentTick - lastLPressTick < 280) {
-                capsLock = !capsLock;
-                lastLPressTick = 0;
-            } else {
-                lastLPressTick = currentTick;
-            }
-        }
-
-        bool isLHeld = (kHeld & KEY_L);
-        bool isZLHeld = (kHeld & KEY_ZL);
-        bool isZRHeld = (kHeld & KEY_ZR);
-        bool isSelectHeld = (kHeld & KEY_SELECT);
-
-        if (kDown & KEY_SELECT) {
-            if (!hasSelection) {
-                hasSelection = true;
-                selAnchor = cursorPos;
-            }
-        }
-
-        u32 dpadMask = KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN;
-        bool triggerDpad = false;
-        if (kDown & dpadMask) {
-            triggerDpad = true;
-            dpadCooldown = INITIAL_DELAY;
-        } else if (kHeld & dpadMask) {
-            if (dpadCooldown > 0) dpadCooldown--;
-            else {
-                triggerDpad = true;
-                dpadCooldown = REPEAT_RATE;
-            }
-        } else {
-            dpadCooldown = 0;
-        }
-
-        if (triggerDpad) {
-            if (kHeld & KEY_DLEFT) moveCursorLeft(isSelectHeld);
-            if (kHeld & KEY_DRIGHT) moveCursorRight(isSelectHeld);
-            if (kHeld & KEY_DUP) moveCursorUp(isSelectHeld);
-            if (kHeld & KEY_DDOWN) moveCursorDown(isSelectHeld);
-        }
-
-        bool triggerB = false;
-        if (kDown & KEY_B) {
-            triggerB = true;
-            undoCooldown = INITIAL_DELAY;
-        } else if (kHeld & KEY_B) {
-            if (undoCooldown > 0) undoCooldown--;
-            else {
-                triggerB = true;
-                undoCooldown = REPEAT_RATE;
-            }
-        } else {
-            undoCooldown = 0;
-        }
-
-        if (triggerB) {
-            hasSelection = false;
-            if (isZLHeld) {
-                if (!redoStack.empty()) {
-                    undoStack.push_back({documento, cursorPos});
-                    EditorState st = redoStack.back();
-                    redoStack.pop_back();
-                    documento = st.text;
-                    cursorPos = std::min(st.cursor, documento.size());
-                }
-            } else if (isLHeld) {
-                for (int step = 0; step < 5 && !undoStack.empty(); step++) {
-                    redoStack.push_back({documento, cursorPos});
-                    EditorState st = undoStack.back();
-                    undoStack.pop_back();
-                    documento = st.text;
-                    cursorPos = std::min(st.cursor, documento.size());
-                }
-            } else {
-                if (!undoStack.empty()) {
-                    redoStack.push_back({documento, cursorPos});
-                    EditorState st = undoStack.back();
-                    undoStack.pop_back();
-                    documento = st.text;
-                    cursorPos = std::min(st.cursor, documento.size());
-                }
-            }
-        }
-
-        if (kDown & KEY_Y) {
-            if (hasSelection && selAnchor != cursorPos) {
-                size_t start = std::min(selAnchor, cursorPos);
-                size_t end = std::max(selAnchor, cursorPos);
-                portapapeles = documento.substr(start, end - start);
-                if (isLHeld) {
-                    pushUndo();
-                    documento.erase(start, end - start);
-                    cursorPos = start;
-                    hasSelection = false;
-                }
-            }
-        }
-
-        if (kDown & KEY_A) {
-            if (!portapapeles.empty()) {
-                pushUndo();
-                deleteSelectionIfAny();
-                std::string aPegar = portapapeles;
-                if (isZLHeld) {
-                    size_t p;
-                    while ((p = aPegar.find("--- [PAGINA NUEVA] ---")) != std::string::npos) {
-                        aPegar.erase(p, 22);
-                    }
-                }
-                documento.insert(cursorPos, aPegar);
-                cursorPos += aPegar.size();
-            }
-        }
-
-        bool isBackspaceTrigger = false;
-        if (kDown & KEY_ZR) {
-            isBackspaceTrigger = true;
-            bsCooldown = INITIAL_DELAY;
-        } else if (kHeld & KEY_ZR) {
-            if (bsCooldown > 0) bsCooldown--;
-            else {
-                isBackspaceTrigger = true;
-                bsCooldown = REPEAT_RATE;
-            }
-        } else {
-            bsCooldown = 0;
-        }
-
-        if (isBackspaceTrigger) {
-            if (hasSelection && selAnchor != cursorPos) {
-                pushUndo();
-                deleteSelectionIfAny();
-            } else if (cursorPos > 0) {
-                pushUndo();
-                if (isLHeld) {
-                    while (cursorPos > 0 && (documento[cursorPos - 1] == ' ' || documento[cursorPos - 1] == '\n')) {
-                        size_t prev = utf8PrevChar(documento, cursorPos);
-                        documento.erase(prev, cursorPos - prev);
-                        cursorPos = prev;
-                    }
-                    while (cursorPos > 0 && documento[cursorPos - 1] != ' ' && documento[cursorPos - 1] != '\n') {
-                        size_t prev = utf8PrevChar(documento, cursorPos);
-                        documento.erase(prev, cursorPos - prev);
-                        cursorPos = prev;
-                    }
-                } else if (isZLHeld) {
-                    size_t lineStart = documento.rfind('\n', cursorPos - 1);
-                    size_t target = (lineStart == std::string::npos) ? 0 : lineStart;
-                    if (target == cursorPos && cursorPos > 0) target--;
-                    documento.erase(target, cursorPos - target);
-                    cursorPos = target;
-                } else {
-                    size_t prev = utf8PrevChar(documento, cursorPos);
-                    documento.erase(prev, cursorPos - prev);
-                    cursorPos = prev;
-                }
-            }
-        }
-
-        if (kDown & KEY_R) {
-            pushUndo();
-            deleteSelectionIfAny();
-            std::string ins = isZLHeld ? "\n--- [PAGINA NUEVA] ---\n" : "\n";
-            documento.insert(cursorPos, ins);
-            cursorPos += ins.size();
-        }
-
-        touchPosition touch;
-        hidTouchRead(&touch);
-
-        int touchedIdx = -1;
-        if (kHeld & KEY_TOUCH) {
-            for (int i = 0; i < (int)keys.size(); i++) {
-                if (touch.px >= keys[i].x && touch.px <= (keys[i].x + keys[i].w) &&
-                    touch.py >= keys[i].y && touch.py <= (keys[i].y + keys[i].h)) {
-                    touchedIdx = i;
-                    break;
-                }
-            }
-        }
-
-        bool triggerTouchKey = false;
-        if (kDown & KEY_TOUCH) {
-            activeTouchKeyIdx = touchedIdx;
-            triggerTouchKey = (touchedIdx != -1);
-            touchCooldown = INITIAL_DELAY;
-        } else if ((kHeld & KEY_TOUCH) && touchedIdx != -1 && touchedIdx == activeTouchKeyIdx) {
-            int kType = keys[touchedIdx].type;
-            if (kType == 0 || kType == 2) {
-                if (touchCooldown > 0) touchCooldown--;
-                else {
-                    triggerTouchKey = true;
-                    touchCooldown = REPEAT_RATE;
-                }
-            }
-        } else {
-            activeTouchKeyIdx = -1;
-            touchCooldown = 0;
-        }
-
-        if (triggerTouchKey && activeTouchKeyIdx != -1) {
-            const auto& key = keys[activeTouchKeyIdx];
-            bool effectiveShift = isLHeld || (capsLock && isLetterKey(key.base));
-
-            if (key.type == 5) {
-                if (key.base == "N") isBold = !isBold;
-                else if (key.base == "K") isItalic = !isItalic;
-                else if (key.base == "S") {
-                    if (isStrikethrough) {
-                        isStrikethrough = false;
-                    } else if (isLHeld || isZRHeld) {
-                        isStrikethrough = true;
-                        isUnderline = false;
-                    } else {
-                        isUnderline = !isUnderline;
-                    }
-                }
-            }
-            else if (key.type == 4) {
-                if (isZLHeld) estadoTeclaMuerta = 3;
-                else if (isLHeld) estadoTeclaMuerta = 2;
-                else estadoTeclaMuerta = 1;
-            }
-            else if (key.type == 0) {
-                pushUndo();
-                deleteSelectionIfAny();
-
-                std::string charToAdd = key.base;
-                if (isLHeld && isZLHeld && key.base == "c") {
-                    charToAdd = "Ç";
-                } else if (isZLHeld && !key.ctrlAlt.empty()) {
-                    charToAdd = key.ctrlAlt;
-                } else if (effectiveShift && !key.shift.empty()) {
-                    charToAdd = key.shift;
-                }
-
-                if (estadoTeclaMuerta > 0 && charToAdd.length() == 1 &&
-                    ((charToAdd[0] >= 'a' && charToAdd[0] <= 'z') || (charToAdd[0] >= 'A' && charToAdd[0] <= 'Z'))) {
-                    std::string acc = aplicarTeclaMuerta(charToAdd[0], estadoTeclaMuerta);
-                    documento.insert(cursorPos, acc);
-                    cursorPos += acc.size();
-                    estadoTeclaMuerta = 0;
-                } else {
-                    if (estadoTeclaMuerta > 0) {
-                        std::string dead = (estadoTeclaMuerta == 1 ? "´" : (estadoTeclaMuerta == 2 ? "¨" : "`"));
-                        documento.insert(cursorPos, dead);
-                        cursorPos += dead.size();
-                        estadoTeclaMuerta = 0;
-                    }
-                    documento.insert(cursorPos, charToAdd);
-                    cursorPos += charToAdd.size();
-                }
-            }
-            else if (key.type == 2) {
-                pushUndo();
-                deleteSelectionIfAny();
-                if (estadoTeclaMuerta > 0) {
-                    std::string dead = (estadoTeclaMuerta == 1 ? "´" : (estadoTeclaMuerta == 2 ? "¨" : "`"));
-                    documento.insert(cursorPos, dead);
-                    cursorPos += dead.size();
-                    estadoTeclaMuerta = 0;
-                }
-                std::string ins = isLHeld ? "     " : " ";
-                documento.insert(cursorPos, ins);
-                cursorPos += ins.size();
-            }
-            else if (key.type == 3) {
-                guardarEnSD(documento, ultimaHoraGuardado);
-            }
-        }
-
-        C2D_TextBufClear(dynamicBuf);
-
-        bool cursorVisible = (osGetTime() / 400) % 2 == 0;
-        std::string cursorGlyph = cursorVisible ? "|" : " ";
-        std::string docVisual = documento;
-
-        if (hasSelection && selAnchor != cursorPos) {
-            size_t sStart = std::min(selAnchor, cursorPos);
-            size_t sEnd = std::max(selAnchor, cursorPos);
-            docVisual.insert(sEnd, "]");
-            docVisual.insert(sStart, "[");
-        } else {
-            docVisual.insert(cursorPos, cursorGlyph);
-        }
-
-        C2D_Text docRenderText;
-        C2D_TextParse(&docRenderText, dynamicBuf, docVisual.c_str());
-        C2D_TextOptimize(&docRenderText);
-
-        char infoEstado[128];
-        snprintf(infoEstado, sizeof(infoEstado), "Pal: %d | Car: %zu | L:%s ZL:%s", 
-                 contarPalabras(documento), 
-                 utf8Length(documento),
-                 isLHeld ? "ON" : (capsLock ? "BLQ" : "OFF"),
-                 isZLHeld ? "ON" : "OFF");
-
-        C2D_Text statusRenderText;
-        C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado);
-        C2D_TextOptimize(&statusRenderText);
-
-        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-
-        // --- PANTALLA SUPERIOR ---
-        C2D_TargetClear(topScreen, C2D_Color32(250, 250, 245, 255));
-        C2D_SceneBegin(topScreen);
-
-        float textTopMargin = 10.0f;
-        if (showTopInfoBar) {
-            textTopMargin = 26.0f;
-            C2D_DrawRectSolid(0, 0, 0.4f, 400, 20, C2D_Color32(45, 55, 72, 255));
-
-            u8 batLevel = 5;
-            PTMU_GetBatteryLevel(&batLevel);
-            int batPct = (batLevel * 100) / 5;
-            char batStr[16];
-            snprintf(batStr, sizeof(batStr), "Bat: %d%%", batPct);
-
-            char titleStr[64];
-            snprintf(titleStr, sizeof(titleStr), "Laura (%s)", ultimaHoraGuardado.c_str());
-
-            time_t now = time(NULL);
-            struct tm* t = localtime(&now);
-            char dateStr[32];
-            if (t) {
-                snprintf(dateStr, sizeof(dateStr), "%02d/%02d/%02d %02d:%02d",
-                         t->tm_mday, t->tm_mon + 1, t->tm_year % 100, t->tm_hour, t->tm_min);
-            } else {
-                snprintf(dateStr, sizeof(dateStr), "--/--/-- --:--");
-            }
-
-            C2D_Text batTxt, titleTxt, dateTxt;
-            C2D_TextParse(&batTxt, dynamicBuf, batStr);
-            C2D_TextOptimize(&batTxt);
-            C2D_TextParse(&titleTxt, dynamicBuf, titleStr);
-            C2D_TextOptimize(&titleTxt);
-            C2D_TextParse(&dateTxt, dynamicBuf, dateStr);
-            C2D_TextOptimize(&dateTxt);
-
-            C2D_DrawText(&batTxt, C2D_WithColor, 8.0f, 3.0f, 0.5f, 0.38f, 0.38f, C2D_Color32(220, 235, 220, 255));
-            C2D_DrawText(&titleTxt, C2D_WithColor, 155.0f, 3.0f, 0.5f, 0.38f, 0.38f, C2D_Color32(255, 255, 255, 255));
-            C2D_DrawText(&dateTxt, C2D_WithColor, 292.0f, 3.0f, 0.5f, 0.38f, 0.38f, C2D_Color32(220, 225, 235, 255));
-        }
-
-        C2D_DrawText(&docRenderText, C2D_WithColor | C2D_WordWrap, 10.0f, textTopMargin, 0.5f, 0.52f, 0.52f, C2D_Color32(30, 30, 30, 255), 380.0f);
-
-        // --- PANTALLA INFERIOR ---
-        C2D_TargetClear(bottomScreen, C2D_Color32(220, 225, 235, 255));
-        C2D_SceneBegin(bottomScreen);
-
-        for (int i = 0; i < (int)keys.size(); i++) {
-            const auto& key = keys[i];
-            u32 colorFondo = C2D_Color32(255, 255, 255, 255);
-            u32 colorTexto = C2D_Color32(30, 30, 35, 255);
-
-            if (i == activeTouchKeyIdx) {
-                colorFondo = C2D_Color32(210, 225, 245, 255);
-            }
-
-            if (key.type == 3) {
-                colorFondo = C2D_Color32(65, 130, 190, 255);
-                colorTexto = C2D_Color32(255, 255, 255, 255);
-            } else if (key.type == 5) {
-                bool activo = (key.base == "N" && isBold) ||
-                              (key.base == "K" && isItalic) ||
-                              (key.base == "S" && (isUnderline || isStrikethrough));
-                if (activo) {
-                    colorFondo = C2D_Color32(90, 105, 120, 255);
-                    colorTexto = C2D_Color32(255, 255, 255, 255);
-                } else {
-                    colorFondo = C2D_Color32(200, 205, 215, 255);
-                    colorTexto = C2D_Color32(60, 65, 75, 255);
-                }
-            } else if (key.type == 4 && estadoTeclaMuerta > 0) {
-                colorFondo = C2D_Color32(230, 180, 100, 255);
-            }
-
-            C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, colorFondo);
-
-            std::string mainChar = key.base;
-            bool effectiveShift = isLHeld || (capsLock && isLetterKey(key.base));
-
-            if (key.type == 0 || key.type == 4) {
-                if (isLHeld && isZLHeld && key.base == "c") mainChar = "Ç";
-                else if (isZLHeld && !key.ctrlAlt.empty()) mainChar = key.ctrlAlt;
-                else if (effectiveShift && !key.shift.empty()) mainChar = key.shift;
-            }
-
-            float textOffsetX = (key.type == 2) ? (key.w / 2.0f) - 38.0f : (key.w / 2.0f) - 4.0f;
-            float textOffsetY = (key.type == 5) ? 2.0f : 4.0f;
-            float scale = (key.type == 5) ? 0.42f : 0.38f;
-
-            C2D_Text keyLabel;
-            C2D_TextParse(&keyLabel, dynamicBuf, mainChar.c_str());
-            C2D_TextOptimize(&keyLabel);
-            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + textOffsetX, key.y + textOffsetY, 0.5f, scale, scale, colorTexto);
-
-            if (key.type == 5 && key.base == "S" && isStrikethrough) {
-                float strikeX = key.x + (key.w / 2.0f) - 7.0f;
-                float strikeY = key.y + (key.h / 2.0f);
-                C2D_DrawRectSolid(strikeX, strikeY, 0.6f, 14.0f, 1.8f, colorTexto);
-            }
-
-            if (!isLHeld && !isZLHeld && (key.type == 0 || key.type == 4)) {
-                if (!key.shift.empty() && key.shift != key.base) {
-                    C2D_Text shiftLbl;
-                    C2D_TextParse(&shiftLbl, dynamicBuf, key.shift.c_str());
-                    C2D_TextOptimize(&shiftLbl);
-                    C2D_DrawText(&shiftLbl, C2D_WithColor, key.x + 2.0f, key.y + 1.0f, 0.5f, 0.20f, 0.20f, C2D_Color32(110, 110, 120, 200));
-                }
-                if (!key.ctrlAlt.empty()) {
-                    C2D_Text ctrlLbl;
-                    C2D_TextParse(&ctrlLbl, dynamicBuf, key.ctrlAlt.c_str());
-                    C2D_TextOptimize(&ctrlLbl);
-                    C2D_DrawText(&ctrlLbl, C2D_WithColor, key.x + key.w - 10.0f, key.y + 1.0f, 0.5f, 0.20f, 0.20f, C2D_Color32(180, 80, 80, 220));
-                }
-            }
-        }
-
-        C2D_DrawRectSolid(0, 215, 0.4f, 320, 25, C2D_Color32(50, 60, 70, 255));
-        C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado);
-        C2D_TextOptimize(&statusRenderText);
-        C2D_DrawText(&statusRenderText, C2D_WithColor, 10.0f, 219.0f, 0.5f, 0.36f, 0.36f, C2D_Color32(255, 255, 255, 255));
-
-        C3D_FrameEnd(0);
-    }
-
-    if (dynamicBuf) C2D_TextBufDelete(dynamicBuf);
-    if (staticBuf) C2D_TextBufDelete(staticBuf);
-
-    ptmuExit();
-    C2D_Fini();
-    C3D_Fini();
-    gfxExit();
-
-    return 0;
-}
+        
+        if (jump) {
+            // Saltar espacios
+            while (cursorPos > 0 && (documento[cursorPos - 1] == ' ' || documento[cursorPos - 1] == '\n')) {
+                cursorPos
