@@ -187,7 +187,7 @@ std::string aplicarTeclaMuerta(char vocal, int tipoMuerta) {
     return res;
 }
 
-// Función principal del editor expuesta para ser llamada desde main.cpp
+// Bucle principal del editor que absorbe toda la lógica pesada
 void runEditorLoop() {
     C3D_RenderTarget* topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
@@ -686,4 +686,63 @@ void runEditorLoop() {
                 }
 
                 if (activo) { colorFondo = C2D_Color32(90, 105, 120, 255); colorTexto = C2D_Color32(255, 255, 255, 255); }
-                else { colorFondo = C2D_Color32(200, 2
+                else { colorFondo = C2D_Color32(200, 205, 215, 255); colorTexto = C2D_Color32(60, 65, 75, 255); }
+            } else if (key.type == 4 && estadoTeclaMuerta > 0) {
+                colorFondo = C2D_Color32(230, 180, 100, 255);
+            }
+
+            C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, colorFondo);
+
+            std::string mainChar = key.base;
+            bool effectiveShift = isLHeld || (capsLock && isLetterKey(key.base));
+
+            if (key.type == 5 && key.base == "S") {
+                if (isLHeld) mainChar = "T";
+                else if (isZLHeld) mainChar = "S/T";
+            }
+
+            if (key.type == 0 || key.type == 4) {
+                if (isLHeld && isZLHeld && key.base == "c") mainChar = "Ç";
+                else if (isZLHeld && !key.ctrlAlt.empty()) mainChar = key.ctrlAlt;
+                else if (effectiveShift && !key.shift.empty()) mainChar = key.shift;
+            }
+
+            float textOffsetX = (key.type == 2) ? (key.w / 2.0f) - 38.0f : (key.w / 2.0f) - 4.0f;
+            float textOffsetY = (key.type == 5) ? 2.0f : 4.0f;
+            float scale = (key.type == 5) ? 0.42f : 0.38f;
+
+            C2D_Text keyLabel; C2D_TextParse(&keyLabel, dynamicBuf, mainChar.c_str()); C2D_TextOptimize(&keyLabel);
+            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + textOffsetX, key.y + textOffsetY, 0.5f, scale, scale, colorTexto);
+
+            if (key.type == 5 && key.base == "S") {
+                if ((!isLHeld && !isZLHeld && activeStyle.underline) || (isZLHeld && activeStyle.underline && activeStyle.strike)) {
+                    C2D_DrawRectSolid(key.x + (key.w / 2.0f) - 9.0f, key.y + key.h - 5.0f, 0.85f, 18.0f, 1.5f, colorTexto);
+                }
+                if ((isLHeld && activeStyle.strike) || (isZLHeld && activeStyle.underline && activeStyle.strike)) {
+                    C2D_DrawRectSolid(key.x + (key.w / 2.0f) - 9.0f, key.y + (key.h / 2.0f) - 0.5f, 0.85f, 18.0f, 1.5f, colorTexto);
+                }
+            }
+
+            if (!isLHeld && !isZLHeld && (key.type == 0 || key.type == 4 || key.type == 2)) {
+                if (!key.shift.empty() && key.shift != key.base) {
+                    C2D_Text shiftLbl; C2D_TextParse(&shiftLbl, dynamicBuf, key.shift.c_str()); C2D_TextOptimize(&shiftLbl);
+                    C2D_DrawText(&shiftLbl, C2D_WithColor, key.x + 2.0f, key.y + 1.0f, 0.5f, 0.20f, 0.20f, C2D_Color32(110, 110, 120, 200));
+                }
+                if (!key.ctrlAlt.empty()) {
+                    C2D_Text ctrlLbl; C2D_TextParse(&ctrlLbl, dynamicBuf, key.ctrlAlt.c_str()); C2D_TextOptimize(&ctrlLbl);
+                    C2D_DrawText(&ctrlLbl, C2D_WithColor, key.x + key.w - 10.0f, key.y + 1.0f, 0.5f, 0.20f, 0.20f, C2D_Color32(180, 80, 80, 220));
+                }
+            }
+        }
+
+        C2D_DrawRectSolid(0, 215, 0.4f, 320, 25, C2D_Color32(50, 60, 70, 255));
+        C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado); C2D_TextOptimize(&statusRenderText);
+        C2D_DrawText(&statusRenderText, C2D_WithColor, 10.0f, 219.0f, 0.5f, 0.36f, 0.36f, C2D_Color32(255, 255, 255, 255));
+
+        C3D_FrameEnd(0);
+    }
+
+    C2D_TextBufDelete(dynamicBuf);
+    ptmuExit(); C2D_Fini(); C3D_Fini(); gfxExit();
+    return 0;
+}
