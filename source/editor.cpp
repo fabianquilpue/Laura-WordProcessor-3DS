@@ -640,4 +640,201 @@ void runEditorLoop() {
             int align;
         };
 
-        std::vector<LineSegment
+        std::vector<LineSegment> lines;
+        size_t lStart = 0;
+        float currentLineWidth = 0;
+        int currentAlign = activeStyle.align;
+
+        for (size_t idx = 0; idx < documento.size(); idx++) {
+            if (!documento.empty()) currentAlign = documento[lStart].style.align;
+            
+            if (documento[idx].glyph == "\n") {
+                lines.push_back({lStart, idx, currentLineWidth, currentAlign});
+                lStart = idx + 1;
+                currentLineWidth = 0;
+            } else {
+                C2D_Text t; C2D_TextParse(&t, dynamicBuf, documento[idx].glyph.c_str());
+                float gw=0, gh=0; float scale = documento[idx].style.fontSize / 48.0f;
+                C2D_TextGetDimensions(&t, scale, scale, &gw, &gh);
+                currentLineWidth += (gw < 3.0f ? 5.0f * scale * 2.0f : gw);
+            }
+        }
+        lines.push_back({lStart, documento.size(), currentLineWidth, currentAlign});
+
+        float curY = textTopMargin;
+        bool cursorVisible = (osGetTime() / 400) % 2 == 0;
+        size_t selStart = hasSelection ? std::min(selAnchor, cursorPos) : 0;
+        size_t selEnd = hasSelection ? std::max(selAnchor, cursorPos) : 0;
+
+        for (const auto& line : lines) {
+            float startX = 10.0f;
+            if (line.align == 1) { // Centrado
+                startX = std::max(10.0f, (400.0f - line.width) / 2.0f);
+            } else if (line.align == 2) { // Derecha
+                startX = std::max(10.0f, 390.0f - line.width);
+            }
+
+            float curX = startX;
+            float maxLineHeight = 16.5f;
+
+            for (size_t idx = line.startIdx; idx <= line.endIdx; idx++) {
+                if (idx == cursorPos && cursorVisible && !menuAbierto) {
+                    C2D_DrawRectSolid(curX, curY, 0.75f, 1.5f, maxLineHeight, COLOR_NEGRO);
+                }
+
+                if (idx == line.endIdx || idx == documento.size()) break;
+
+                const auto& sc = documento[idx];
+                float textScale = sc.style.fontSize / 48.0f;
+                float currentLineHeight = 33.0f * textScale;
+                if (currentLineHeight > maxLineHeight) maxLineHeight = currentLineHeight;
+
+                C2D_Text glyphText; C2D_TextParse(&glyphText, dynamicBuf, sc.glyph.c_str()); C2D_TextOptimize(&glyphText);
+                float gWidth = 0.0f, gHeight = 0.0f; C2D_TextGetDimensions(&glyphText, textScale, textScale, &gWidth, &gHeight);
+                if (gWidth < 3.0f) gWidth = 5.0f * textScale * 2.0f;
+
+                u32 fg = getPaletteColor(sc.style.fgColor, false);
+                u32 bg = sc.style.bgColor != 0 ? getPaletteColor(sc.style.bgColor, true) : 0;
+                if (sc.style.bgColor != 0 && sc.style.fgColor == 0) fg = COLOR_BLANCO;
+
+                if (bg != 0) C2D_DrawRectSolid(curX, curY, 0.25f, gWidth, maxLineHeight, bg);
+                if (hasSelection && idx >= selStart && idx < selEnd) C2D_DrawRectSolid(curX, curY, 0.3f, gWidth, maxLineHeight, C2D_Color32(180, 210, 245, 180));
+
+                float slantX = sc.style.italic ? 3.0f * textScale : 0.0f;
+                
+                C2D_DrawText(&glyphText, C2D_WithColor, curX + slantX, curY, 0.5f, textScale, textScale, fg);
+                if (sc.style.bold) C2D_DrawText(&glyphText, C2D_WithColor, curX + slantX + 1.0f, curY, 0.51f, textScale, textScale, fg);
+                if (sc.style.underline) C2D_DrawRectSolid(curX, curY + maxLineHeight - 2.0f, 0.6f, gWidth, 1.5f, fg);
+                if (sc.style.strike) C2D_DrawRectSolid(curX, curY + (maxLineHeight * 0.55f), 0.65f, gWidth, 1.5f, fg);
+
+                curX += gWidth + (sc.style.bold ? 1.0f : 0.0f);
+            }
+            curY += maxLineHeight;
+        }
+
+        // --- PANTALLA INFERIOR ---
+        C2D_TargetClear(bottomScreen, C2D_Color32(220, 225, 235, 255));
+        C2D_SceneBegin(bottomScreen);
+
+        if (menuAbierto) {
+            // Ventana modal con estilo limpio y la "X" de cierre arriba a la derecha
+            C2D_DrawRectSolid(10, 10, 0.5f, 300, 220, C2D_Color32(245, 245, 250, 255));
+            C2D_DrawRectSolid(10, 10, 0.5f, 300, 28, C2D_Color32(60, 80, 100, 255));
+            
+            C2D_Text titleTxt; C2D_TextParse(&titleTxt, dynamicBuf, "AJUSTES DE FORMATO"); C2D_TextOptimize(&titleTxt);
+            C2D_DrawText(&titleTxt, C2D_WithColor, 20, 16, 0.6f, 0.42f, 0.42f, COLOR_BLANCO);
+
+            // Botón de cierre "X" estilo macOS / Windows
+            C2D_DrawRectSolid(275, 14, 0.6f, 22, 20, C2D_Color32(210, 60, 60, 255));
+            C2D_Text xTxt; C2D_TextParse(&xTxt, dynamicBuf, "X"); C2D_TextOptimize(&xTxt);
+            C2D_DrawText(&xTxt, C2D_WithColor, 281, 15, 0.7f, 0.38f, 0.38f, COLOR_BLANCO);
+
+            // Tamaño
+            char sizeStr[32]; snprintf(sizeStr, sizeof(sizeStr), "TAMANO: %d pt", activeStyle.fontSize / 2);
+            C2D_Text szTxt; C2D_TextParse(&szTxt, dynamicBuf, sizeStr); C2D_TextOptimize(&szTxt);
+            C2D_DrawText(&szTxt, C2D_WithColor, 20, 52, 0.6f, 0.4f, 0.4f, COLOR_NEGRO);
+            
+            C2D_DrawRectSolid(30, 70, 0.6f, 40, 28, C2D_Color32(200, 200, 200, 255));
+            C2D_Text minusTxt; C2D_TextParse(&minusTxt, dynamicBuf, "-"); C2D_TextOptimize(&minusTxt);
+            C2D_DrawText(&minusTxt, C2D_WithColor, 47, 73, 0.7f, 0.5f, 0.5f, COLOR_NEGRO);
+            
+            C2D_DrawRectSolid(80, 70, 0.6f, 40, 28, C2D_Color32(200, 200, 200, 255));
+            C2D_Text plusTxt; C2D_TextParse(&plusTxt, dynamicBuf, "+"); C2D_TextOptimize(&plusTxt);
+            C2D_DrawText(&plusTxt, C2D_WithColor, 96, 73, 0.7f, 0.5f, 0.5f, COLOR_NEGRO);
+            
+            // Color Fuente
+            C2D_Text fgTxt; C2D_TextParse(&fgTxt, dynamicBuf, "COLOR FUENTE:"); C2D_TextOptimize(&fgTxt);
+            C2D_DrawText(&fgTxt, C2D_WithColor, 20, 110, 0.6f, 0.4f, 0.4f, COLOR_NEGRO);
+            for (int c = 0; c <= 6; c++) {
+                C2D_DrawRectSolid(30 + (c * 35), 125, 0.6f, 26, 26, getPaletteColor(c, false));
+                if (activeStyle.fgColor == c) C2D_DrawRectSolid(30 + (c * 35), 153, 0.6f, 26, 3, COLOR_NEGRO);
+            }
+
+            // Color Fondo
+            C2D_Text bgTxt; C2D_TextParse(&bgTxt, dynamicBuf, "COLOR FONDO:"); C2D_TextOptimize(&bgTxt);
+            C2D_DrawText(&bgTxt, C2D_WithColor, 20, 165, 0.6f, 0.4f, 0.4f, COLOR_NEGRO);
+            for (int c = 0; c <= 6; c++) {
+                C2D_DrawRectSolid(30 + (c * 35), 180, 0.6f, 26, 26, c == 0 ? COLOR_BLANCO : getPaletteColor(c, true));
+                if (activeStyle.bgColor == c) C2D_DrawRectSolid(30 + (c * 35), 208, 0.6f, 26, 3, COLOR_NEGRO);
+            }
+        } else {
+            // Teclado normal
+            for (int i = 0; i < (int)keys.size(); i++) {
+                const auto& key = keys[i];
+                u32 cFondo = C2D_Color32(255, 255, 255, 255); u32 cTexto = COLOR_NEGRO;
+
+                if (i == activeTouchKeyIdx) cFondo = C2D_Color32(210, 225, 245, 255);
+                
+                if (key.type == 3) {
+                    cFondo = C2D_Color32(65, 130, 190, 255); cTexto = COLOR_BLANCO;
+                } else if (key.type >= 5) {
+                    bool activo = false;
+                    if (key.base == "N") activo = activeStyle.bold;
+                    else if (key.base == "K") activo = activeStyle.italic;
+                    else if (key.base == "S") activo = activeStyle.underline;
+                    
+                    if (activo) { cFondo = C2D_Color32(90, 105, 120, 255); cTexto = COLOR_BLANCO; }
+                    else { cFondo = C2D_Color32(200, 205, 215, 255); cTexto = C2D_Color32(60, 65, 75, 255); }
+                }
+
+                C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, cFondo);
+
+                if (key.type == 6) {
+                    // Dibujar icono de alineación en lugar de texto
+                    float bx = key.x + 8.0f;
+                    float by = key.y + 5.0f;
+                    u32 icColor = cTexto;
+                    if (activeStyle.align == 0) { // Izquierda
+                        C2D_DrawRectSolid(bx, by, 0.4f, 20, 2.5f, icColor);
+                        C2D_DrawRectSolid(bx, by + 5.0f, 0.4f, 13, 2.5f, icColor);
+                        C2D_DrawRectSolid(bx, by + 10.0f, 0.4f, 17, 2.5f, icColor);
+                    } else if (activeStyle.align == 1) { // Centro
+                        C2D_DrawRectSolid(bx, by, 0.4f, 20, 2.5f, icColor);
+                        C2D_DrawRectSolid(bx + 3.5f, by + 5.0f, 0.4f, 13, 2.5f, icColor);
+                        C2D_DrawRectSolid(bx + 1.5f, by + 10.0f, 0.4f, 17, 2.5f, icColor);
+                    } else if (activeStyle.align == 2) { // Derecha
+                        C2D_DrawRectSolid(bx, by, 0.4f, 20, 2.5f, icColor);
+                        C2D_DrawRectSolid(bx + 7.0f, by + 5.0f, 0.4f, 13, 2.5f, icColor);
+                        C2D_DrawRectSolid(bx + 3.0f, by + 10.0f, 0.4f, 17, 2.5f, icColor);
+                    } else { // Justificado
+                        C2D_DrawRectSolid(bx, by, 0.4f, 20, 2.5f, icColor);
+                        C2D_DrawRectSolid(bx, by + 5.0f, 0.4f, 20, 2.5f, icColor);
+                        C2D_DrawRectSolid(bx, by + 10.0f, 0.4f, 20, 2.5f, icColor);
+                    }
+                } else {
+                    std::string mainChar = key.base;
+                    float sX = (key.type >= 5) ? 0.40f : 0.38f;
+                    float textOffsetX = (key.type == 2) ? (key.w / 2.0f) - 38.0f : ((key.type >= 5) ? (key.w / 2.0f) - 14.0f : (key.w / 2.0f) - 4.0f);
+                    float textOffsetY = (key.type >= 5) ? 2.5f : 4.0f;
+
+                    C2D_Text keyLabel; C2D_TextParse(&keyLabel, dynamicBuf, mainChar.c_str()); C2D_TextOptimize(&keyLabel);
+                    C2D_DrawText(&keyLabel, C2D_WithColor, key.x + textOffsetX, key.y + textOffsetY, 0.5f, sX, sX, cTexto);
+                }
+                
+                if (!isLHeld && !isZLHeld && (key.type == 0 || key.type == 4 || key.type == 2)) {
+                    if (!key.shift.empty() && key.shift != key.base) {
+                        C2D_Text shiftLbl; C2D_TextParse(&shiftLbl, dynamicBuf, key.shift.c_str()); C2D_TextOptimize(&shiftLbl);
+                        C2D_DrawText(&shiftLbl, C2D_WithColor, key.x + 2.0f, key.y + 1.0f, 0.5f, 0.20f, 0.20f, C2D_Color32(110, 110, 120, 200));
+                    }
+                    if (!key.ctrlAlt.empty()) {
+                        C2D_Text ctrlLbl; C2D_TextParse(&ctrlLbl, dynamicBuf, key.ctrlAlt.c_str()); C2D_TextOptimize(&ctrlLbl);
+                        C2D_DrawText(&ctrlLbl, C2D_WithColor, key.x + key.w - 10.0f, key.y + 1.0f, 0.5f, 0.20f, 0.20f, C2D_Color32(180, 80, 80, 220));
+                    }
+                }
+            }
+        }
+
+        std::string plainDoc = styledToPlainString(documento);
+        char infoEstado[128];
+        snprintf(infoEstado, sizeof(infoEstado), "Pal: %d | Car: %zu | L:%s ZL:%s", 
+                 contarPalabras(plainDoc), documento.size(), isLHeld ? "ON" : (capsLock ? "BLQ" : "OFF"), isZLHeld ? "ON" : "OFF");
+        
+        C2D_DrawRectSolid(0, 215, 0.4f, 320, 25, C2D_Color32(50, 60, 70, 255));
+        C2D_Text statusRenderText; C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado); C2D_TextOptimize(&statusRenderText);
+        C2D_DrawText(&statusRenderText, C2D_WithColor, 10.0f, 219.0f, 0.5f, 0.36f, 0.36f, COLOR_BLANCO);
+
+        C3D_FrameEnd(0);
+    }
+
+    C2D_TextBufDelete(dynamicBuf);
+}
