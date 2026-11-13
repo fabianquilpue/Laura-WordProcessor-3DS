@@ -16,7 +16,6 @@ struct KeyButton {
     int type; // 0 = texto, 2 = espacio, 3 = guardar, 4 = tecla muerta, 5 = formato (N/K/S)
 };
 
-// Utilidades UTF-8 para mover el cursor y borrar sin partir tildes, ñ, €, etc.
 size_t utf8PrevChar(const std::string& str, size_t pos) {
     if (pos == 0) return 0;
     pos--;
@@ -49,7 +48,6 @@ bool isLetterKey(const std::string& base) {
     return (base.size() == 1 && base[0] >= 'a' && base[0] <= 'z');
 }
 
-// Guardar en SD y registrar hora
 bool guardarEnSD(const std::string& contenido, std::string& ultimaHoraGuardado) {
     FILE* archivo = fopen("sdmc:/laura_documento.txt", "w");
     if (!archivo) return false;
@@ -58,9 +56,11 @@ bool guardarEnSD(const std::string& contenido, std::string& ultimaHoraGuardado) 
 
     time_t now = time(NULL);
     struct tm* t = localtime(&now);
-    char buf[16];
-    snprintf(buf, sizeof(buf), "%02d:%02d", t->tm_hour, t->tm_min);
-    ultimaHoraGuardado = buf;
+    if (t) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%02d:%02d", t->tm_hour, t->tm_min);
+        ultimaHoraGuardado = buf;
+    }
     return true;
 }
 
@@ -101,7 +101,6 @@ std::string aplicarTeclaMuerta(char vocal, int tipoMuerta) {
     return res;
 }
 
-// Historial para Undo / Redo
 struct EditorState {
     std::string text;
     size_t cursor;
@@ -109,7 +108,7 @@ struct EditorState {
 
 int main(int argc, char* argv[]) {
     gfxInitDefault();
-    ptmuInit(); // Para leer nivel de batería
+    ptmuInit();
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
@@ -120,7 +119,6 @@ int main(int argc, char* argv[]) {
     C2D_TextBuf staticBuf = C2D_TextBufNew(4096);
     C2D_TextBuf dynamicBuf = C2D_TextBufNew(32768);
 
-    // Construcción del teclado ergonómico
     std::vector<KeyButton> keys;
     float btnW = 29.5f; 
     float btnH = 22.0f; 
@@ -188,7 +186,6 @@ int main(int argc, char* argv[]) {
     keys.push_back({8.0f, f6_y, 185.0f, 22.0f, "ESPACIO / TAB", "ESPACIO / TAB", " ", 2});
     keys.push_back({198.0f, f6_y, 114.0f, 22.0f, "GUARDAR", "GUARDAR", "GUARDAR", 3});
 
-    // Estado del documento y edición
     std::string documento = "";
     size_t cursorPos = 0;
     bool hasSelection = false;
@@ -223,16 +220,13 @@ int main(int argc, char* argv[]) {
     bool capsLock = false;
     u64 lastLPressTick = 0;
 
-    // Estados de formato (N = Negrita, K = Cursiva, S = Subrayado, Tachado)
     bool isBold = false;
     bool isItalic = false;
     bool isUnderline = false;
     bool isStrikethrough = false;
 
-    // Toggle Info (Botón X)
     bool showTopInfoBar = true;
 
-    // Temporizadores de repetición estándar (más ágiles)
     const int INITIAL_DELAY = 15;
     const int REPEAT_RATE = 4;
 
@@ -242,7 +236,6 @@ int main(int argc, char* argv[]) {
     int dpadCooldown = 0;
     int undoCooldown = 0;
 
-    // Funciones de movimiento de cursor
     auto moveCursorLeft = [&](bool selecting) {
         if (selecting && !hasSelection) { hasSelection = true; selAnchor = cursorPos; }
         if (!selecting) hasSelection = false;
@@ -297,12 +290,10 @@ int main(int argc, char* argv[]) {
 
         if (kDown & KEY_START) break;
 
-        // Toggle Info con Botón X
         if (kDown & KEY_X) {
             showTopInfoBar = !showTopInfoBar;
         }
 
-        // Doble clic rápido en L para CAPS LOCK (solo letras)
         if (kDown & KEY_L) {
             u64 currentTick = osGetTime();
             if (currentTick - lastLPressTick < 280) {
@@ -325,7 +316,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // Navegación con Cruceta (D-Pad)
         u32 dpadMask = KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN;
         bool triggerDpad = false;
         if (kDown & dpadMask) {
@@ -348,7 +338,6 @@ int main(int argc, char* argv[]) {
             if (kHeld & KEY_DDOWN) moveCursorDown(isSelectHeld);
         }
 
-        // Undo / Redo con Botón B (con repetición al dejar presionado)
         bool triggerB = false;
         if (kDown & KEY_B) {
             triggerB = true;
@@ -366,7 +355,6 @@ int main(int argc, char* argv[]) {
         if (triggerB) {
             hasSelection = false;
             if (isZLHeld) {
-                // ZL + B = REDO
                 if (!redoStack.empty()) {
                     undoStack.push_back({documento, cursorPos});
                     EditorState st = redoStack.back();
@@ -375,7 +363,6 @@ int main(int argc, char* argv[]) {
                     cursorPos = std::min(st.cursor, documento.size());
                 }
             } else if (isLHeld) {
-                // L + B = UNDO últimos 5 caracteres
                 for (int step = 0; step < 5 && !undoStack.empty(); step++) {
                     redoStack.push_back({documento, cursorPos});
                     EditorState st = undoStack.back();
@@ -384,7 +371,6 @@ int main(int argc, char* argv[]) {
                     cursorPos = std::min(st.cursor, documento.size());
                 }
             } else {
-                // B = UNDO 1 carácter
                 if (!undoStack.empty()) {
                     redoStack.push_back({documento, cursorPos});
                     EditorState st = undoStack.back();
@@ -395,13 +381,12 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // Copiar (Y) / Cortar (L + Y)
         if (kDown & KEY_Y) {
             if (hasSelection && selAnchor != cursorPos) {
                 size_t start = std::min(selAnchor, cursorPos);
                 size_t end = std::max(selAnchor, cursorPos);
                 portapapeles = documento.substr(start, end - start);
-                if (isLHeld) { // Cortar
+                if (isLHeld) {
                     pushUndo();
                     documento.erase(start, end - start);
                     cursorPos = start;
@@ -410,14 +395,12 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // Pegar (A) / Pegar sin formato (ZL + A)
         if (kDown & KEY_A) {
             if (!portapapeles.empty()) {
                 pushUndo();
                 deleteSelectionIfAny();
                 std::string aPegar = portapapeles;
                 if (isZLHeld) {
-                    // Limpiar marcadores de página si los hubiera para pegar texto plano puro
                     size_t p;
                     while ((p = aPegar.find("--- [PAGINA NUEVA] ---")) != std::string::npos) {
                         aPegar.erase(p, 22);
@@ -428,7 +411,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // Backspace con ZR (velocidad calibrada e idéntica a repetición de teclas)
         bool isBackspaceTrigger = false;
         if (kDown & KEY_ZR) {
             isBackspaceTrigger = true;
@@ -450,7 +432,6 @@ int main(int argc, char* argv[]) {
             } else if (cursorPos > 0) {
                 pushUndo();
                 if (isLHeld) {
-                    // Borrar palabra hacia atrás
                     while (cursorPos > 0 && (documento[cursorPos - 1] == ' ' || documento[cursorPos - 1] == '\n')) {
                         size_t prev = utf8PrevChar(documento, cursorPos);
                         documento.erase(prev, cursorPos - prev);
@@ -462,14 +443,12 @@ int main(int argc, char* argv[]) {
                         cursorPos = prev;
                     }
                 } else if (isZLHeld) {
-                    // Borrar línea hacia atrás
                     size_t lineStart = documento.rfind('\n', cursorPos - 1);
                     size_t target = (lineStart == std::string::npos) ? 0 : lineStart;
                     if (target == cursorPos && cursorPos > 0) target--;
                     documento.erase(target, cursorPos - target);
                     cursorPos = target;
                 } else {
-                    // Borrar 1 carácter UTF-8
                     size_t prev = utf8PrevChar(documento, cursorPos);
                     documento.erase(prev, cursorPos - prev);
                     cursorPos = prev;
@@ -477,7 +456,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // Enter (R) y Salto de Página (ZL + R)
         if (kDown & KEY_R) {
             pushUndo();
             deleteSelectionIfAny();
@@ -486,7 +464,6 @@ int main(int argc, char* argv[]) {
             cursorPos += ins.size();
         }
 
-        // Procesamiento táctil con repetición estándar al dejar presionado
         touchPosition touch;
         hidTouchRead(&touch);
 
@@ -507,7 +484,6 @@ int main(int argc, char* argv[]) {
             triggerTouchKey = (touchedIdx != -1);
             touchCooldown = INITIAL_DELAY;
         } else if ((kHeld & KEY_TOUCH) && touchedIdx != -1 && touchedIdx == activeTouchKeyIdx) {
-            // Repetición continua para teclas de texto y espacio
             int kType = keys[touchedIdx].type;
             if (kType == 0 || kType == 2) {
                 if (touchCooldown > 0) touchCooldown--;
@@ -525,15 +501,13 @@ int main(int argc, char* argv[]) {
             const auto& key = keys[activeTouchKeyIdx];
             bool effectiveShift = isLHeld || (capsLock && isLetterKey(key.base));
 
-            if (key.type == 5) { // Botones de formato: N, K, S (con alterno Tachado mediante L o ZR)
+            if (key.type == 5) {
                 if (key.base == "N") isBold = !isBold;
                 else if (key.base == "K") isItalic = !isItalic;
                 else if (key.base == "S") {
                     if (isStrikethrough) {
-                        // Si ya estaba tachada, tocarla de nuevo la desactiva siempre
                         isStrikethrough = false;
                     } else if (isLHeld || isZRHeld) {
-                        // Activar modo tachado con L o ZR
                         isStrikethrough = true;
                         isUnderline = false;
                     } else {
@@ -541,12 +515,12 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-            else if (key.type == 4) { // Tecla muerta
+            else if (key.type == 4) {
                 if (isZLHeld) estadoTeclaMuerta = 3;
                 else if (isLHeld) estadoTeclaMuerta = 2;
                 else estadoTeclaMuerta = 1;
             }
-            else if (key.type == 0) { // Carácter normal
+            else if (key.type == 0) {
                 pushUndo();
                 deleteSelectionIfAny();
 
@@ -576,7 +550,7 @@ int main(int argc, char* argv[]) {
                     cursorPos += charToAdd.size();
                 }
             }
-            else if (key.type == 2) { // Espacio / Tab limpio (5 espacios)
+            else if (key.type == 2) {
                 pushUndo();
                 deleteSelectionIfAny();
                 if (estadoTeclaMuerta > 0) {
@@ -589,15 +563,13 @@ int main(int argc, char* argv[]) {
                 documento.insert(cursorPos, ins);
                 cursorPos += ins.size();
             }
-            else if (key.type == 3) { // Guardar
+            else if (key.type == 3) {
                 guardarEnSD(documento, ultimaHoraGuardado);
             }
         }
 
-        // Preparar textos dinámicos
         C2D_TextBufClear(dynamicBuf);
 
-        // Construir representación visual del documento con cursor en la posición exacta y selección
         bool cursorVisible = (osGetTime() / 400) % 2 == 0;
         std::string cursorGlyph = cursorVisible ? "|" : " ";
         std::string docVisual = documento;
@@ -615,7 +587,6 @@ int main(int argc, char* argv[]) {
         C2D_TextParse(&docRenderText, dynamicBuf, docVisual.c_str());
         C2D_TextOptimize(&docRenderText);
 
-        // Barra inferior de estado (Conteo de palabras y caracteres en español)
         char infoEstado[128];
         snprintf(infoEstado, sizeof(infoEstado), "Pal: %d | Car: %zu | L:%s ZL:%s", 
                  contarPalabras(documento), 
@@ -638,23 +609,24 @@ int main(int argc, char* argv[]) {
             textTopMargin = 26.0f;
             C2D_DrawRectSolid(0, 0, 0.4f, 400, 20, C2D_Color32(45, 55, 72, 255));
 
-            // Nivel de batería (0-5 en PTMU -> porcentaje aproximado)
             u8 batLevel = 5;
             PTMU_GetBatteryLevel(&batLevel);
             int batPct = (batLevel * 100) / 5;
             char batStr[16];
             snprintf(batStr, sizeof(batStr), "Bat: %d%%", batPct);
 
-            // Título y última hora de guardado al centro
             char titleStr[64];
             snprintf(titleStr, sizeof(titleStr), "Laura (%s)", ultimaHoraGuardado.c_str());
 
-            // Fecha y hora en formato DD/MM/YY HH:MM (24h)
             time_t now = time(NULL);
             struct tm* t = localtime(&now);
             char dateStr[32];
-            snprintf(dateStr, sizeof(dateStr), "%02d/%02d/%02d %02d:%02d",
-                     t->tm_mday, t->tm_mon + 1, t->tm_year % 100, t->tm_hour, t->tm_min);
+            if (t) {
+                snprintf(dateStr, sizeof(dateStr), "%02d/%02d/%02d %02d:%02d",
+                         t->tm_mday, t->tm_mon + 1, t->tm_year % 100, t->tm_hour, t->tm_min);
+            } else {
+                snprintf(dateStr, sizeof(dateStr), "--/--/-- --:--");
+            }
 
             C2D_Text batTxt, titleTxt, dateTxt;
             C2D_TextParse(&batTxt, dynamicBuf, batStr);
@@ -680,7 +652,6 @@ int main(int argc, char* argv[]) {
             u32 colorFondo = C2D_Color32(255, 255, 255, 255);
             u32 colorTexto = C2D_Color32(30, 30, 35, 255);
 
-            // Feedback visual si la tecla está siendo presionada
             if (i == activeTouchKeyIdx) {
                 colorFondo = C2D_Color32(210, 225, 245, 255);
             }
@@ -723,14 +694,12 @@ int main(int argc, char* argv[]) {
             C2D_TextOptimize(&keyLabel);
             C2D_DrawText(&keyLabel, C2D_WithColor, key.x + textOffsetX, key.y + textOffsetY, 0.5f, scale, scale, colorTexto);
 
-            // Si la tecla S está en modo TACHADO, dibujar la línea horizontal tachando la letra S
             if (key.type == 5 && key.base == "S" && isStrikethrough) {
                 float strikeX = key.x + (key.w / 2.0f) - 7.0f;
                 float strikeY = key.y + (key.h / 2.0f);
                 C2D_DrawRectSolid(strikeX, strikeY, 0.6f, 14.0f, 1.8f, colorTexto);
             }
 
-            // Dibujar variantes secundarias en esquinas
             if (!isLHeld && !isZLHeld && (key.type == 0 || key.type == 4)) {
                 if (!key.shift.empty() && key.shift != key.base) {
                     C2D_Text shiftLbl;
