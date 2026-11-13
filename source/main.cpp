@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <sstream>
 
-// Estructura para representar cada tecla con sus capas (Base, Shift/L, CtrlAlt/ZL) y ayudas visuales
+// Estructura para representar cada tecla con sus capas (Base, Shift/L, CtrlAlt/ZL)
 struct KeyButton {
     float x, y, w, h;
     std::string base;
@@ -32,7 +32,7 @@ int contarPalabras(const std::string& texto) {
     return contador;
 }
 
-// Función para procesar vocales con tilde o diéresis (Teclas muertas)
+// Función para procesar vocales con tilde, diéresis o tilde abierta (Teclas muertas)
 std::string aplicarTeclaMuerta(char vocal, int tipoMuerta) {
     bool esMayuscula = (vocal >= 'A' && vocal <= 'Z');
     char vLower = esMayuscula ? (vocal + 32) : vocal;
@@ -85,33 +85,24 @@ int main(int argc, char* argv[]) {
     float btnH = 24.0f; 
     float gap = 2.0f;
 
-    // Fila 1: Numérica exacta (1/|/[no], 2/*/@, 3/·/#, 4/$/ª, 5/%/+, 6/&/¬, 7//\, 8/(, 9/), 0/=/º)
-    std::string r1_base  = "1234567890";
-    std::string r1_shift = "*·$%&/()="; // Nota: '7' usa índice especial para '/'
-    std::string r1_ctrl  = "|@#%+¬\\   "; // Nota: '1' usa '|', '7' usa '\\'
+    // Fila 1: Numérica exacta (arreglos explícitos para preservar caracteres UTF-8 sin warnings)
+    std::string r1_base[10]  = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
+    std::string r1_shift[10] = {"|", "*", "·", "$", "%", "&", "/", "(", ")", "="};
+    std::string r1_ctrl[10]  = {"",  "@", "#", "ª", "+", "¬", "\\", "",  "",  "º"};
     float f1_x = 8.0f;
     float f1_y = 12.0f;
     for (int i = 0; i < 10; i++) {
-        std::string b(1, r1_base[i]);
-        std::string s = (i == 6) ? "/" : std::string(1, r1_shift[i]);
-        std::string c = "";
-        if (i == 0) c = "|";
-        else if (i == 6) c = "\\";
-        else if (i < r1_ctrl.length() && r1_ctrl[i] != ' ') c = std::string(1, r1_ctrl[i]);
-        
-        keys.push_back({f1_x + i * (btnW + gap), f1_y, btnW, btnH, b, s, c, 0});
+        keys.push_back({f1_x + i * (btnW + gap), f1_y, btnW, btnH, r1_base[i], r1_shift[i], r1_ctrl[i], 0});
     }
 
     // Fila 2: QWERTY (con e/E/€)
-    std::string r2_base  = "qwertyuiop";
-    std::string r2_shift = "QWERTYUIOP";
+    std::string r2_base[10]  = {"q", "w", "e", "r", "t", "y", "u", "i", "o", "p"};
+    std::string r2_shift[10] = {"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"};
+    std::string r2_ctrl[10]  = {"",  "",  "€", "",  "",  "",  "",  "",  "",  ""};
     float f2_x = 8.0f;
     float f2_y = f1_y + btnH + 3.0f;
     for (int i = 0; i < 10; i++) {
-        std::string b(1, r2_base[i]);
-        std::string s(1, r2_shift[i]);
-        std::string c = (r2_base[i] == 'e') ? "€" : "";
-        keys.push_back({f2_x + i * (btnW + gap), f2_y, btnW, btnH, b, s, c, 0});
+        keys.push_back({f2_x + i * (btnW + gap), f2_y, btnW, btnH, r2_base[i], r2_shift[i], r2_ctrl[i], 0});
     }
 
     // Fila 3: ASDF (con ñ/Ñ/~)
@@ -127,7 +118,7 @@ int main(int argc, char* argv[]) {
     // Fila 4: ZXCV (z/Z/<, x/X/>, c/C/ç, v, b, n/N/{, m/M/}, ,/; , ./:/… , ´/¨/`)
     std::string r4_base[10]  = {"z", "x", "c", "v", "b", "n", "m", ",", ".", "´"};
     std::string r4_shift[10] = {"Z", "X", "C", "V", "B", "N", "M", ";", ":", "¨"};
-    std::string r4_ctrl[10]  = {"<", ">", "ç", "",  "",  "{", "}", "",  "",  "`"};
+    std::string r4_ctrl[10]  = {"<", ">", "ç", "",  "",  "{", "}", "",  "…", "`"};
     float f4_x = 8.0f;
     float f4_y = f3_y + btnH + 3.0f;
     for (int i = 0; i < 9; i++) {
@@ -162,7 +153,7 @@ int main(int argc, char* argv[]) {
 
         if (kDown & KEY_START) break;
 
-        // Nuevos modificadores físicos asignados:
+        // Modificadores físicos asignados:
         bool isShift = (kHeld & KEY_L);
         bool isCtrlAlt = (kHeld & KEY_ZL);
         bool isEnter = (kDown & KEY_R);
@@ -205,15 +196,15 @@ int main(int argc, char* argv[]) {
                     }
                     else if (key.type == 0) { // Carácter normal
                         std::string charToAdd = key.base;
-                        if (isCtrlAlt && !key.ctrlAlt.empty()) charToAdd = key.ctrlAlt;
-                        else if (isShift) charToAdd = key.shift;
-
-                        // Regla especial para Ç mayúscula: L + ZL + c
                         if (isShift && isCtrlAlt && key.base == "c") {
-                            charToAdd = "Ç";
+                            charToAdd = "Ç"; // Regla especial L + ZL + c
+                        } else if (isCtrlAlt && !key.ctrlAlt.empty()) {
+                            charToAdd = key.ctrlAlt;
+                        } else if (isShift && !key.shift.empty()) {
+                            charToAdd = key.shift;
                         }
 
-                        // Si hay tecla muerta activa y se presiona una vocal
+                        // Si hay tecla muerta activa y se presiona una vocal ASCII
                         if (estadoTeclaMuerta > 0 && charToAdd.length() == 1 && 
                             ((charToAdd[0] >= 'a' && charToAdd[0] <= 'z') || (charToAdd[0] >= 'A' && charToAdd[0] <= 'Z'))) {
                             documento += aplicarTeclaMuerta(charToAdd[0], estadoTeclaMuerta);
@@ -293,4 +284,50 @@ int main(int argc, char* argv[]) {
                 colorFondo = C2D_Color32(230, 180, 100, 255);
             }
 
-            C2D_DrawRectSolid(key
+            C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, colorFondo);
+
+            std::string mainChar = key.base;
+            if (isShift && isCtrlAlt && key.base == "c") mainChar = "Ç";
+            else if (isCtrlAlt && !key.ctrlAlt.empty()) mainChar = key.ctrlAlt;
+            else if (isShift && !key.shift.empty()) mainChar = key.shift;
+            if (key.type > 0 && key.type != 4) mainChar = key.base;
+
+            C2D_Text keyLabel;
+            C2D_TextParse(&keyLabel, dynamicBuf, mainChar.c_str());
+            C2D_TextOptimize(&keyLabel);
+            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + (key.w / 2.0f) - 4.0f, key.y + 4.0f, 0.5f, 0.40f, 0.40f, colorTexto);
+
+            // Mostrar esquinas secundarias si no hay modificadores activos
+            if (!isShift && !isCtrlAlt && (key.type == 0 || key.type == 4)) {
+                if (!key.shift.empty() && key.shift != key.base) {
+                    C2D_Text shiftLbl;
+                    C2D_TextParse(&shiftLbl, dynamicBuf, key.shift.c_str());
+                    C2D_TextOptimize(&shiftLbl);
+                    C2D_DrawText(&shiftLbl, C2D_WithColor, key.x + 2.0f, key.y + 1.0f, 0.5f, 0.20f, 0.20f, C2D_Color32(110, 110, 120, 200));
+                }
+                if (!key.ctrlAlt.empty()) {
+                    C2D_Text ctrlLbl;
+                    C2D_TextParse(&ctrlLbl, dynamicBuf, key.ctrlAlt.c_str());
+                    C2D_TextOptimize(&ctrlLbl);
+                    C2D_DrawText(&ctrlLbl, C2D_WithColor, key.x + key.w - 10.0f, key.y + 1.0f, 0.5f, 0.20f, 0.20f, C2D_Color32(180, 80, 80, 220));
+                }
+            }
+        }
+
+        C2D_DrawRectSolid(0, 215, 0.4f, 320, 25, C2D_Color32(50, 60, 70, 255));
+        C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado);
+        C2D_TextOptimize(&statusRenderText);
+        C2D_DrawText(&statusRenderText, C2D_WithColor, 10.0f, 219.0f, 0.5f, 0.40f, 0.40f, C2D_Color32(255, 255, 255, 255));
+
+        C3D_FrameEnd(0);
+    }
+
+    if (dynamicBuf) C2D_TextBufDelete(dynamicBuf);
+    if (staticBuf) C2D_TextBufDelete(staticBuf);
+
+    C2D_Fini();
+    C3D_Fini();
+    gfxExit();
+
+    return 0;
+}
