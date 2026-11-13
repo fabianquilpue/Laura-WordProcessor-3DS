@@ -744,4 +744,12 @@ int main(int argc, char* argv[]) {
 
         C2D_DrawRectSolid(0, 215, 0.4f, 320, 25, C2D_Color32(50, 60, 70, 255));
         C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado); C2D_TextOptimize(&statusRenderText);
-        C2D_DrawText(&statusRenderText, C2D_WithColor, 10.0f, 219.0f, 0.5f,
+        C2D_DrawText(&statusRenderText, C2D_WithColor, 10.0f, 219.0f, 0.5f, 0.36f, 0.36f, C2D_Color32(255, 255, 255, 255));
+
+        C3D_FrameEnd(0);
+    }
+
+    C2D_TextBufDelete(dynamicBuf);
+    ptmuExit(); C2D_Fini(); C3D_Fini(); gfxExit();
+    return 0;
+}
