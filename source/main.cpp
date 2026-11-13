@@ -62,6 +62,32 @@ std::string aplicarTeclaMuerta(char vocal, int tipoMuerta) {
     return res;
 }
 
+// Función para borrado inteligente adaptado a modificadores
+void ejecutarBackspace(std::string& documento, bool isShift, bool isCtrlAlt) {
+    if (documento.empty()) return;
+
+    if (isShift) { 
+        // Borrar palabra completa (L + ZR)
+        while (!documento.empty() && (documento.back() == ' ' || documento.back() == '\t' || documento.back() == '\n')) {
+            documento.pop_back();
+        }
+        while (!documento.empty() && documento.back() != ' ' && documento.back() != '\t' && documento.back() != '\n') {
+            documento.pop_back();
+        }
+    } else if (isCtrlAlt) { 
+        // Borrar línea completa (ZL + ZR)
+        size_t pos = documento.find_last_of('\n');
+        if (pos != std::string::npos) {
+            documento.erase(pos);
+        } else {
+            documento.clear();
+        }
+    } else { 
+        // Carácter individual
+        documento.pop_back();
+    }
+}
+
 int main(int argc, char* argv[]) {
     // 1. Inicializar subsistemas de la 3DS
     gfxInitDefault();
@@ -85,10 +111,10 @@ int main(int argc, char* argv[]) {
     float btnH = 24.0f; 
     float gap = 2.0f;
 
-    // Fila 1: Numérica exacta (arreglos explícitos para preservar caracteres UTF-8 sin warnings)
+    // Fila 1: Numérica exacta (Actualizada con 8 y 9 en sus nuevos estados)
     std::string r1_base[10]  = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
     std::string r1_shift[10] = {"|", "*", "·", "$", "%", "&", "/", "(", ")", "="};
-    std::string r1_ctrl[10]  = {"",  "@", "#", "ª", "+", "¬", "\\", "",  "",  "º"};
+    std::string r1_ctrl[10]  = {"",  "@", "#", "ª", "+", "¬", "\\", "[", "]", "º"};
     float f1_x = 8.0f;
     float f1_y = 12.0f;
     for (int i = 0; i < 10; i++) {
@@ -115,7 +141,7 @@ int main(int argc, char* argv[]) {
         keys.push_back({f3_x + i * (btnW + gap), f3_y, btnW, btnH, r3_base[i], r3_shift[i], r3_ctrl[i], 0});
     }
 
-    // Fila 4: ZXCV (z/Z/<, x/X/>, c/C/ç, v, b, n/N/{, m/M/}, ,/; , ./:/… , ´/¨/`)
+    // Fila 4: ZXCV
     std::string r4_base[10]  = {"z", "x", "c", "v", "b", "n", "m", ",", ".", "´"};
     std::string r4_shift[10] = {"Z", "X", "C", "V", "B", "N", "M", ";", ":", "¨"};
     std::string r4_ctrl[10]  = {"<", ">", "ç", "",  "",  "{", "}", "",  "…", "`"};
@@ -127,7 +153,7 @@ int main(int argc, char* argv[]) {
     // Décima tecla de la fila 4 es la Tilde (Tecla Muerta)
     keys.push_back({f4_x + 9 * (btnW + gap), f4_y, btnW, btnH, r4_base[9], r4_shift[9], r4_ctrl[9], 4});
 
-    // Fila 5: Puntuación exacta («, ¿, ¡, -/–, ‘/“, ?, !, »)
+    // Fila 5: Puntuación exacta
     std::string puncs_b[8] = {"«", "¿", "¡", "-", "‘", "?", "!", "»"};
     std::string puncs_s[8] = {"«", "¿", "¡", "–", "“", "?", "!", "»"};
     float f5_x = 8.0f;
@@ -143,7 +169,8 @@ int main(int argc, char* argv[]) {
 
     std::string documento = "";
     std::string estadoMensaje = "Listo para escribir.";
-    int estadoTeclaMuerta = 0; // 0 = sin tilde, 1 = tilde aguda (´), 2 = dieresis (¨), 3 = tilde abierta (`)
+    int estadoTeclaMuerta = 0; 
+    int backspaceCooldown = 0;
 
     // 3. Bucle principal de la aplicación
     while (aptMainLoop()) {
@@ -153,29 +180,39 @@ int main(int argc, char* argv[]) {
 
         if (kDown & KEY_START) break;
 
-        // Modificadores físicos asignados:
         bool isShift = (kHeld & KEY_L);
         bool isCtrlAlt = (kHeld & KEY_ZL);
         bool isEnter = (kDown & KEY_R);
-        bool isBackspace = (kDown & KEY_ZR) || (kHeld & KEY_ZR);
-
-        // Funciones físicas de los gatillos R y ZR
-        if (isBackspace) {
-            if (!documento.empty()) {
-                documento.pop_back();
-                estadoMensaje = "Borrado con ZR.";
+        
+        bool isBackspaceTrigger = false;
+        if (kDown & KEY_ZR) {
+            isBackspaceTrigger = true;
+            backspaceCooldown = 18;
+        } else if (kHeld & KEY_ZR) {
+            if (backspaceCooldown > 0) {
+                backspaceCooldown--;
+            } else {
+                isBackspaceTrigger = true;
+                backspaceCooldown = 12;
             }
+        } else {
+            backspaceCooldown = 0;
+        }
+
+        if (isBackspaceTrigger) {
+            ejecutarBackspace(documento, isShift, isCtrlAlt);
+            estadoMensaje = isShift ? "Borrada palabra." : (isCtrlAlt ? "Borrada linea." : "Borrado.");
         }
 
         if (isEnter) {
             if (isShift) {
-                documento += "\n\n"; // L + R = Salto de párrafo
+                documento += "\n\n"; 
                 estadoMensaje = "Salto de parrafo.";
             } else if (isCtrlAlt) {
-                documento += "\n--- [PAGINA] ---\n"; // ZL + R = Salto de página
+                documento += "\n--- [PAGINA] ---\n"; 
                 estadoMensaje = "Salto de pagina.";
             } else {
-                documento += "\n"; // R = Enter normal
+                documento += "\n"; 
                 estadoMensaje = "Enter.";
             }
         }
@@ -189,22 +226,21 @@ int main(int argc, char* argv[]) {
                     touch.py >= key.y && touch.py <= (key.y + key.h)) {
                     
                     if (key.type == 4) { // Tecla muerta
-                        if (isCtrlAlt) estadoTeclaMuerta = 3; // `
-                        else if (isShift) estadoTeclaMuerta = 2; // ¨
-                        else estadoTeclaMuerta = 1; // ´
+                        if (isCtrlAlt) estadoTeclaMuerta = 3; 
+                        else if (isShift) estadoTeclaMuerta = 2; 
+                        else estadoTeclaMuerta = 1; 
                         estadoMensaje = "Tecla muerta activa.";
                     }
                     else if (key.type == 0) { // Carácter normal
                         std::string charToAdd = key.base;
                         if (isShift && isCtrlAlt && key.base == "c") {
-                            charToAdd = "Ç"; // Regla especial L + ZL + c
+                            charToAdd = "Ç"; 
                         } else if (isCtrlAlt && !key.ctrlAlt.empty()) {
                             charToAdd = key.ctrlAlt;
                         } else if (isShift && !key.shift.empty()) {
                             charToAdd = key.shift;
                         }
 
-                        // Si hay tecla muerta activa y se presiona una vocal ASCII
                         if (estadoTeclaMuerta > 0 && charToAdd.length() == 1 && 
                             ((charToAdd[0] >= 'a' && charToAdd[0] <= 'z') || (charToAdd[0] >= 'A' && charToAdd[0] <= 'Z'))) {
                             documento += aplicarTeclaMuerta(charToAdd[0], estadoTeclaMuerta);
@@ -269,7 +305,7 @@ int main(int argc, char* argv[]) {
         C2D_DrawText(&headerText, C2D_WithColor, 10.0f, 4.0f, 0.5f, 0.5f, 0.5f, C2D_Color32(255, 255, 255, 255));
         C2D_DrawText(&docRenderText, C2D_WithColor | C2D_WordWrap, 10.0f, 34.0f, 0.5f, 0.52f, 0.52f, C2D_Color32(30, 30, 30, 255), 380.0f);
 
-        // --- PANTALLA INFERIOR (Teclado Multicapa Visual con L y ZL) ---
+        // --- PANTALLA INFERIOR ---
         C2D_TargetClear(bottomScreen, C2D_Color32(220, 225, 235, 255));
         C2D_SceneBegin(bottomScreen);
 
@@ -297,7 +333,6 @@ int main(int argc, char* argv[]) {
             C2D_TextOptimize(&keyLabel);
             C2D_DrawText(&keyLabel, C2D_WithColor, key.x + (key.w / 2.0f) - 4.0f, key.y + 4.0f, 0.5f, 0.40f, 0.40f, colorTexto);
 
-            // Mostrar esquinas secundarias si no hay modificadores activos
             if (!isShift && !isCtrlAlt && (key.type == 0 || key.type == 4)) {
                 if (!key.shift.empty() && key.shift != key.base) {
                     C2D_Text shiftLbl;
