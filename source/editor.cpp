@@ -126,31 +126,19 @@ bool guardarEnRTF(const std::vector<StyledChar>& doc, std::string& fileName, std
 
 std::string aplicarTeclaMuerta(char vocal, int tipoMuerta) {
     bool isUpper = (vocal >= 'A' && vocal <= 'Z'); char vL = isUpper ? (vocal + 32) : vocal;
-    if (tipoMuerta == 1) { // Agudo
-        if (vL=='a') return isUpper?"Á":"á";
-        if (vL=='e') return isUpper?"É":"é";
-        if (vL=='i') return isUpper?"Í":"í";
-        if (vL=='o') return isUpper?"Ó":"ó";
-        if (vL=='u') return isUpper?"Ú":"ú";
-    } else if (tipoMuerta == 2) { // Dieresis
-        if (vL=='a') return isUpper?"Ä":"ä";
-        if (vL=='e') return isUpper?"Ë":"ë";
-        if (vL=='i') return isUpper?"Ï":"ï";
-        if (vL=='o') return isUpper?"Ö":"ö";
-        if (vL=='u') return isUpper?"Ü":"ü";
-    } else if (tipoMuerta == 3) { // Grave
-        if (vL=='a') return isUpper?"À":"à";
-        if (vL=='e') return isUpper?"È":"è";
-        if (vL=='i') return isUpper?"Ì":"ì";
-        if (vL=='o') return isUpper?"Ò":"ò";
-        if (vL=='u') return isUpper?"Ù":"ù";
-    } else if (tipoMuerta == 4) { // Circunflejo
-        if (vL=='a') return isUpper?"Â":"â";
-        if (vL=='e') return isUpper?"Ê":"ê";
-        if (vL=='i') return isUpper?"Î":"î";
-        if (vL=='o') return isUpper?"Ô":"ô";
-        if (vL=='u') return isUpper?"Û":"û";
-    } else if (tipoMuerta == 5) { // Virgulilla / Tilde Ñ
+    if (tipoMuerta == 1) {
+        if (vL=='a') return isUpper?"Á":"á"; if (vL=='e') return isUpper?"É":"é"; if (vL=='i') return isUpper?"Í":"í";
+        if (vL=='o') return isUpper?"Ó":"ó"; if (vL=='u') return isUpper?"Ú":"ú";
+    } else if (tipoMuerta == 2) {
+        if (vL=='a') return isUpper?"Ä":"ä"; if (vL=='e') return isUpper?"Ë":"ë"; if (vL=='i') return isUpper?"Ï":"ï";
+        if (vL=='o') return isUpper?"Ö":"ö"; if (vL=='u') return isUpper?"Ü":"ü";
+    } else if (tipoMuerta == 3) {
+        if (vL=='a') return isUpper?"À":"à"; if (vL=='e') return isUpper?"È":"è"; if (vL=='i') return isUpper?"Ì":"ì";
+        if (vL=='o') return isUpper?"Ò":"ò"; if (vL=='u') return isUpper?"Ù":"ù";
+    } else if (tipoMuerta == 4) {
+        if (vL=='a') return isUpper?"Â":"â"; if (vL=='e') return isUpper?"Ê":"ê"; if (vL=='i') return isUpper?"Î":"î";
+        if (vL=='o') return isUpper?"Ô":"ô"; if (vL=='u') return isUpper?"Û":"û";
+    } else if (tipoMuerta == 5) {
         if (vL=='n') return isUpper?"Ñ":"ñ";
     }
     std::string res = (tipoMuerta == 1 ? "´" : (tipoMuerta == 2 ? "¨" : (tipoMuerta == 3 ? "`" : (tipoMuerta == 4 ? "^" : "~")))); res += vocal; return res;
@@ -161,20 +149,31 @@ void runEditorLoop() {
     C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
     C2D_TextBuf dynamicBuf = C2D_TextBufNew(65536);
 
-    // --- PANTALLA DE BIENVENIDA (SPLASH SCREEN) ---
+    // --- PANTALLA DE BIENVENIDA (SPLASH SCREEN CON FADE) ---
     {
         C2D_SpriteSheet splashSheet = C2D_SpriteSheetLoad("romfs:/splash.t3x");
         C2D_Image splashImg = {0};
         bool hasSplash = (splashSheet != NULL);
         if (hasSplash) splashImg = C2D_SpriteSheetGetImage(splashSheet, 0);
 
-        u64 startTick = osGetTime();
         bool splashActive = true;
+        int fadeAlpha = 255;
+        bool fadingIn = true;
+
         while (aptMainLoop() && splashActive) {
             hidScanInput();
             u32 kDown = hidKeysDown();
             touchPosition touch; hidTouchRead(&touch);
-            if (kDown || (kDown & KEY_TOUCH) || (osGetTime() - startTick > 8000)) splashActive = false;
+
+            if (fadingIn) {
+                fadeAlpha -= 15;
+                if (fadeAlpha <= 0) { fadeAlpha = 0; fadingIn = false; }
+            }
+
+            if (!fadingIn && (kDown || (kDown & KEY_TOUCH))) {
+                fadingIn = true; // Fade to black
+            }
+            if (fadingIn && fadeAlpha >= 255 && !hasSplash) { splashActive = false; }
 
             C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
             C2D_TargetClear(topScreen, COLOR_BLANCO);
@@ -213,7 +212,12 @@ void runEditorLoop() {
                 C2D_DrawText(&tPrompt, C2D_WithColor, (320.0f - tw)/2.0f, 110.0f, 0.6f, 0.45f, 0.45f, COLOR_MUSGO);
             }
 
+            if (fadeAlpha > 0) {
+                C2D_DrawRectSolid(0, 0, 0.9f, 400, 240, C2D_Color32(0, 0, 0, fadeAlpha));
+            }
+
             C3D_FrameEnd(0);
+            if (fadingIn && fadeAlpha >= 255) splashActive = false;
         }
         if (splashSheet) C2D_SpriteSheetFree(splashSheet);
         C2D_TextBufClear(dynamicBuf);
@@ -233,7 +237,7 @@ void runEditorLoop() {
     keys.push_back({268.0f, row0, 48.0f, 22.0f, "<-", "<-", "<-", 10}); 
 
     std::string r1_b[10] = {"1","2","3","4","5","6","7","8","9","0"}; 
-    std::string r1_s[10] = {"*","\"","·","$","%","&","/","<",">","="}; 
+    std::string r1_s[10] = {"*","\"","·","$","%","&","/","<","," "="}; 
     std::string r1_c[10] = {"|","@","#","ª","+","¬","\\","^","]","º"};
     for (int i = 0; i < 10; i++) keys.push_back({8.0f + i * (btnW + gap), row1, btnW, 23.0f, r1_b[i], r1_s[i], r1_c[i], 0}); 
     
@@ -272,11 +276,11 @@ void runEditorLoop() {
     bool flagSalir = false;
     std::vector<std::string> fileList; int fileScroll = 0;
     
-    int startMenuSel = 0; 
-    int formatMenuRow = 0; 
-    int formatMenuCol = 0; 
-    int openMenuSel = 0;
-    int confirmSel = 1; 
+    int startMenuSel = -1; // -1: Ninguno seleccionado por defecto
+    int formatMenuRow = 0, formatMenuCol = 0; 
+    int openMenuSel = -1;
+    int confirmSel = -1; // -1: Ninguno seleccionado por defecto
+    int manualMenuSel = -1; // -1: Ninguno seleccionado por defecto
 
     const int INITIAL_DELAY = 15; const int REPEAT_RATE = 4;
     int bsCooldown = 0, touchCooldown = 0, activeTouchKeyIdx = -1, dpadCooldown = 0, undoCooldown = 0;
@@ -317,7 +321,7 @@ void runEditorLoop() {
         bool isZLHeld = (kHeld & KEY_ZL);
         bool isZRHeld = (kHeld & KEY_ZR); 
 
-        if (kDown & KEY_START) { menuAbierto = 2; startMenuSel = 0; }
+        if (kDown & KEY_START) { menuAbierto = 2; startMenuSel = -1; }
         if (kDown & KEY_X && menuAbierto == 0) showTopInfoBar = !showTopInfoBar;
 
         if (kDown & KEY_L) {
@@ -352,14 +356,30 @@ void runEditorLoop() {
                     else if (formatMenuRow == 3) formatMenuCol = 0;
                     else formatMenuCol = std::min(7, formatMenuCol + 1);
                 }
-            } else if (menuAbierto == 2) { 
-                if (kHeld & KEY_DUP) startMenuSel = std::max(0, startMenuSel - 1);
-                if (kHeld & KEY_DDOWN) startMenuSel = std::min(4, startMenuSel + 1);
-            } else if (menuAbierto == 5) { 
-                if (kHeld & KEY_DUP) { if (openMenuSel > 0) openMenuSel--; else if (fileScroll > 0) fileScroll--; }
-                if (kHeld & KEY_DDOWN) { if (openMenuSel < 4 && openMenuSel < (int)fileList.size()-1) openMenuSel++; else if (fileScroll + openMenuSel < (int)fileList.size() - 1) fileScroll++; }
-            } else if (menuAbierto == 6 || menuAbierto == 7) { 
-                if (kHeld & KEY_DLEFT || kHeld & KEY_DRIGHT) confirmSel = 1 - confirmSel;
+            } else if (menuAbierto == 2) { // Start menu (0 a 4 botones + Cruz X = 5 elementos)
+                if (startMenuSel == -1) startMenuSel = 0;
+                else {
+                    if (kHeld & KEY_DUP) startMenuSel = std::max(0, startMenuSel - 1);
+                    if (kHeld & KEY_DDOWN) startMenuSel = std::min(5, startMenuSel + 1);
+                }
+            } else if (menuAbierto == 3 || menuAbierto == 4) { // Manual (Botones de navegación / Cruz X)
+                if (manualMenuSel == -1) manualMenuSel = 0;
+                else {
+                    if (kHeld & KEY_DLEFT || kHeld & KEY_DUP) manualMenuSel = std::max(0, manualMenuSel - 1);
+                    if (kHeld & KEY_DRIGHT || kHeld & KEY_DDOWN) manualMenuSel = std::min(menuAbierto == 3 ? 1 : 2, manualMenuSel + 1);
+                }
+            } else if (menuAbierto == 5) { // Abrir
+                if (openMenuSel == -1) openMenuSel = 0;
+                else {
+                    if (kHeld & KEY_DUP) { if (openMenuSel > 0) openMenuSel--; else if (fileScroll > 0) fileScroll--; }
+                    if (kHeld & KEY_DDOWN) { if (openMenuSel < 4 && openMenuSel < (int)fileList.size()-1) openMenuSel++; else if (fileScroll + openMenuSel < (int)fileList.size() - 1) fileScroll++; }
+                }
+            } else if (menuAbierto == 6 || menuAbierto == 7) { // Confirmaciones Sí / No / Cruz X (3 elementos)
+                if (confirmSel == -1) confirmSel = 0;
+                else {
+                    if (kHeld & KEY_DLEFT || kHeld & KEY_DUP) confirmSel = std::max(0, confirmSel - 1);
+                    if (kHeld & KEY_DRIGHT || kHeld & KEY_DDOWN) confirmSel = std::min(2, confirmSel + 1);
+                }
             } else if (menuAbierto == 0) {
                 bool sel = (kHeld & KEY_SELECT) || isSelectModeToggle;
                 if (!sel) hasSelection = false; else if (!hasSelection) { hasSelection = true; selAnchor = cursorPos; }
@@ -387,7 +407,8 @@ void runEditorLoop() {
                     }
                 }
             } else if (menuAbierto == 2) {
-                if (startMenuSel == 0) { guardarEnRTF(documento, fileName, ultimaHoraGuardado); menuAbierto = 0; }
+                if (startMenuSel == 5) { menuAbierto = 0; } // Cruz X
+                else if (startMenuSel == 0) { guardarEnRTF(documento, fileName, ultimaHoraGuardado); menuAbierto = 0; }
                 else if (startMenuSel == 1) {
                     SwkbdState swkbd; char mybuf[256]; swkbdInit(&swkbd, SWKBD_TYPE_NORMAL, 1, -1);
                     swkbdSetValidation(&swkbd, SWKBD_NOTEMPTY_NOTBLANK, 0, 0); swkbdSetHintText(&swkbd, "Nombre del archivo"); swkbdSetInitialText(&swkbd, fileName.c_str());
@@ -397,14 +418,21 @@ void runEditorLoop() {
                     fileList.clear(); DIR *dir = opendir("sdmc:/");
                     if (dir) { struct dirent *ent; while ((ent = readdir(dir)) != NULL) { std::string fn = ent->d_name; if (fn.size() > 4 && fn.substr(fn.size()-4) == ".rtf") fileList.push_back(fn); } closedir(dir); }
                     menuAbierto = 5; fileScroll = 0; openMenuSel = 0;
-                } else if (startMenuSel == 3) { menuAbierto = 3; }
-                else if (startMenuSel == 4) { menuAbierto = 7; confirmSel = 1; } 
+                } else if (startMenuSel == 3) { menuAbierto = 3; manualMenuSel = -1; }
+                else if (startMenuSel == 4) { menuAbierto = 7; confirmSel = -1; } 
+            } else if (menuAbierto == 3) {
+                if (manualMenuSel == 1) menuAbierto = 0; // Cruz X
+                else if (manualMenuSel == 0) { menuAbierto = 4; manualMenuSel = -1; } // Siguiente
+            } else if (menuAbierto == 4) {
+                if (manualMenuSel == 2) menuAbierto = 0; // Cruz X
+                else if (manualMenuSel == 0) { menuAbierto = 3; manualMenuSel = -1; } // Anterior
+                else if (manualMenuSel == 1) { menuAbierto = 0; } // Cerrar
             } else if (menuAbierto == 5) {
                 if (fileScroll + openMenuSel < (int)fileList.size()) {
-                    menuAbierto = 6; confirmSel = 1; 
+                    menuAbierto = 6; confirmSel = -1; 
                 }
             } else if (menuAbierto == 6) { 
-                if (confirmSel == 0) { 
+                if (confirmSel == 0) { // SÍ
                     fileName = fileList[fileScroll + openMenuSel]; fileName = fileName.substr(0, fileName.find_last_of('.'));
                     std::string path = "sdmc:/" + fileName + ".rtf"; FILE* f = fopen(path.c_str(), "r");
                     if (f) {
@@ -524,10 +552,10 @@ void runEditorLoop() {
         if (menuAbierto != 0) {
             if (touchJustPressed) {
                 if (menuAbierto == 1) { 
-                    if (touch.px >= 280 && touch.px <= 305 && touch.py >= 12 && touch.py <= 37) menuAbierto = 0; 
-                    if (touch.px >= 15 && touch.px <= 55 && touch.py >= 52 && touch.py <= 80) { activeStyle.fontSize = std::max(12, activeStyle.fontSize - 2); formatMenuRow = 0; formatMenuCol = 0; }
-                    if (touch.px >= 135 && touch.px <= 175 && touch.py >= 52 && touch.py <= 80) { activeStyle.fontSize = std::min(72, activeStyle.fontSize + 2); formatMenuRow = 0; formatMenuCol = 1; }
-                    if (touch.px >= 195 && touch.px <= 295 && touch.py >= 52 && touch.py <= 80) { activeStyle.lineSpacing = (activeStyle.lineSpacing + 1) % 4; formatMenuRow = 3; formatMenuCol = 0; }
+                    if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) menuAbierto = 0; 
+                    if (touch.px >= 15 && touch.px <= 55 && touch.py >= 60 && touch.py <= 88) { activeStyle.fontSize = std::max(12, activeStyle.fontSize - 2); formatMenuRow = 0; formatMenuCol = 0; }
+                    if (touch.px >= 135 && touch.px <= 175 && touch.py >= 60 && touch.py <= 88) { activeStyle.fontSize = std::min(72, activeStyle.fontSize + 2); formatMenuRow = 0; formatMenuCol = 1; }
+                    if (touch.px >= 195 && touch.px <= 295 && touch.py >= 60 && touch.py <= 88) { activeStyle.lineSpacing = (activeStyle.lineSpacing + 1) % 4; formatMenuRow = 3; formatMenuCol = 0; }
                     
                     for (int c = 0; c <= 7; c++) {
                         if (touch.px >= 15 + (c * 34) && touch.px <= 15 + (c * 34) + 26 && touch.py >= 130 && touch.py <= 156) { activeStyle.fgColor = c; formatMenuRow = 1; formatMenuCol = c; }
@@ -543,8 +571,8 @@ void runEditorLoop() {
                         }
                     }
                 } else if (menuAbierto == 2) { 
-                    if (touch.px >= 280 && touch.px <= 305 && touch.py >= 12 && touch.py <= 37) menuAbierto = 0; 
-                    if (touch.px >= 60 && touch.px <= 260) {
+                    if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) { menuAbierto = 0; } 
+                    else if (touch.px >= 60 && touch.px <= 260) {
                         if (touch.py >= 50 && touch.py <= 75) { guardarEnRTF(documento, fileName, ultimaHoraGuardado); menuAbierto = 0; } 
                         if (touch.py >= 85 && touch.py <= 110) { 
                             SwkbdState swkbd; char mybuf[256]; swkbdInit(&swkbd, SWKBD_TYPE_NORMAL, 1, -1);
@@ -557,27 +585,28 @@ void runEditorLoop() {
                             if (dir) { struct dirent *ent; while ((ent = readdir(dir)) != NULL) { std::string fn = ent->d_name; if (fn.size() > 4 && fn.substr(fn.size()-4) == ".rtf") fileList.push_back(fn); } closedir(dir); }
                             menuAbierto = 5; fileScroll = 0; openMenuSel = 0;
                         }
-                        if (touch.py >= 155 && touch.py <= 180) { menuAbierto = 3; } 
-                        if (touch.py >= 190 && touch.py <= 215) { menuAbierto = 7; confirmSel = 1; } 
+                        if (touch.py >= 155 && touch.py <= 180) { menuAbierto = 3; manualMenuSel = -1; } 
+                        if (touch.py >= 190 && touch.py <= 215) { menuAbierto = 7; confirmSel = -1; } 
                     }
-                } else if (menuAbierto == 3 || menuAbierto == 4) { 
-                    if (touch.px >= 280 && touch.px <= 305 && touch.py >= 12 && touch.py <= 37) menuAbierto = 0; 
-                    if (menuAbierto == 3 && touch.px >= 180 && touch.px <= 290 && touch.py >= 190 && touch.py <= 215) { menuAbierto = 4; }
-                    else if (menuAbierto == 4) {
-                        if (touch.px >= 20 && touch.px <= 120 && touch.py >= 190 && touch.py <= 215) menuAbierto = 3;
-                        if (touch.px >= 140 && touch.px <= 250 && touch.py >= 190 && touch.py <= 215) menuAbierto = 0;
-                    }
+                } else if (menuAbierto == 3) { 
+                    if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) { menuAbierto = 0; }
+                    else if (touch.px >= 180 && touch.px <= 290 && touch.py >= 190 && touch.py <= 215) { menuAbierto = 4; manualMenuSel = -1; }
+                } else if (menuAbierto == 4) {
+                    if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) { menuAbierto = 0; }
+                    else if (touch.px >= 20 && touch.px <= 120 && touch.py >= 190 && touch.py <= 215) { menuAbierto = 3; manualMenuSel = -1; }
+                    else if (touch.px >= 140 && touch.px <= 250 && touch.py >= 190 && touch.py <= 215) { menuAbierto = 0; }
                 } else if (menuAbierto == 5) { 
-                    if (touch.px >= 280 && touch.px <= 305 && touch.py >= 12 && touch.py <= 37) menuAbierto = 0; 
+                    if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) { menuAbierto = 0; }
                     for (int i = 0; i < 5 && (fileScroll + i) < (int)fileList.size(); i++) {
                         if (touch.px >= 20 && touch.px <= 280 && touch.py >= 50 + (i*30) && touch.py <= 75 + (i*30)) {
                             openMenuSel = i;
-                            menuAbierto = 6; confirmSel = 1;
+                            menuAbierto = 6; confirmSel = -1;
                         }
                     }
                 } else if (menuAbierto == 6 || menuAbierto == 7) { 
                     if (touch.px >= 70 && touch.px <= 140 && touch.py >= 135 && touch.py <= 160) confirmSel = 0;
                     if (touch.px >= 180 && touch.px <= 250 && touch.py >= 135 && touch.py <= 160) confirmSel = 1;
+                    if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) { menuAbierto = (menuAbierto == 6 ? 5 : 2); }
                 }
             }
         } else {
@@ -624,7 +653,7 @@ void runEditorLoop() {
             }
             else if (key.type == 5) {
                 if (key.base == "N") activeStyle.bold = !activeStyle.bold;
-                if (key.base == "K") { activeStyle.italic = false; } 
+                if (key.base == "K") { activeStyle.italic = !activeStyle.italic; } 
                 if (key.base == "S") {
                     if (isZLHeld) { activeStyle.underline = true; activeStyle.strike = true; }
                     else if (isLHeld) { activeStyle.strike = !activeStyle.strike; }
@@ -638,7 +667,7 @@ void runEditorLoop() {
                     pushUndo(); size_t s = std::min(selAnchor, cursorPos), e = std::max(selAnchor, cursorPos);
                     for (size_t idx = s; idx < e; idx++) {
                         if (key.base == "N") documento[idx].style.bold = activeStyle.bold;
-                        if (key.base == "K") documento[idx].style.italic = false;
+                        if (key.base == "K") documento[idx].style.italic = activeStyle.italic;
                         if (key.base == "S") { documento[idx].style.underline = activeStyle.underline; documento[idx].style.strike = activeStyle.strike; }
                     }
                 }
@@ -726,15 +755,15 @@ void runEditorLoop() {
             C2D_DrawRectSolid(5, 5, 0.6f, 390, 3, COLOR_MUSGO); C2D_DrawRectSolid(5, 232, 0.6f, 390, 3, COLOR_MUSGO);
             C2D_DrawRectSolid(5, 5, 0.6f, 3, 230, COLOR_MUSGO); C2D_DrawRectSolid(392, 5, 0.6f, 3, 230, COLOR_MUSGO);
             
-            C2D_Text mTxt; C2D_TextParse(&mTxt, dynamicBuf, menuAbierto == 3 ? "MANUAL (PAGINA 1)" : "MANUAL (PAGINA 2)"); C2D_TextOptimize(&mTxt);
-            C2D_DrawText(&mTxt, C2D_WithColor, 20, 15, 0.7f, 0.6f, 0.6f, COLOR_NEGRO);
+            C2D_Text mTxt; C2D_TextParse(&mTxt, dynamicBuf, menuAbierto == 3 ? "MANUAL DEL USUARIO (1/2)" : "MANUAL DEL USUARIO (2/2)"); C2D_TextOptimize(&mTxt);
+            C2D_DrawText(&mTxt, C2D_WithColor, 20, 15, 0.7f, 0.55f, 0.55f, COLOR_NEGRO);
             
             if (menuAbierto == 3) {
-                C2D_Text t1; C2D_TextParse(&t1, dynamicBuf, "MAPEO DE ENTRADAS Y NAVEGACION:\n- D-PAD: Mover cursor / Navegar modales\n- R (Enter): Salto de linea. Con L/ZL: de pagina.\n- ZR: Retroceso. L: Borra palabra, ZL: Linea.\n- Y: Copiar. A: Pegar. Y+L o Y+ZL: Cortar.\n- ¶: Visibiliza saltos fisicos en pantalla.");
-                C2D_TextOptimize(&t1); C2D_DrawText(&t1, C2D_WithColor, 20, 45, 0.7f, 0.40f, 0.40f, COLOR_NEGRO);
+                C2D_Text t1; C2D_TextParse(&t1, dynamicBuf, "GUIA TECNICA DE DIGITACION:\n- Salto de linea: **R**. Con L o ZL inserta salto de pagina.\n- Retroceso: **ZR**. Con L borra palabra, con ZL borra linea.\n- Copiar seleccion: **Y** (si hay texto seleccionado).\n- Cortar: **Y + L** o **Y + ZL**.\n- Pegar: **A** (pega con su formato original).\n- Pegar sin formato: **A + L** o **A + ZL** (aplica estilo vigente).\n- Marcar saltos fisicos: **¶** en la barra superior.");
+                C2D_TextOptimize(&t1); C2D_DrawText(&t1, C2D_WithColor, 20, 45, 0.7f, 0.35f, 0.35f, COLOR_NEGRO);
             } else {
-                C2D_Text t2; C2D_TextParse(&t2, dynamicBuf, "«Laura» es un procesador de texto que reune las\nfunciones esenciales para escritura sin distracciones.\nInspirado en maquinas de escribir y ergonomia.\nPuntuaciones accesibles e intuitivas. Cuenta con casi\nla totalidad de un QWERTY y exporta archivos RTF\ncon control estricto de estilos. Proyecto bajo licencia\nCreative Commons (sin fines de lucro / no comercial).");
-                C2D_TextOptimize(&t2); C2D_DrawText(&t2, C2D_WithColor, 20, 45, 0.7f, 0.38f, 0.38f, COLOR_NEGRO);
+                C2D_Text t2; C2D_TextParse(&t2, dynamicBuf, "«Laura» es un procesador de textos disenado\nexpresamente para la Nintendo 3DS, pensado\npara ofrecer una experiencia de escritura fluida,\nlimpia y completamente libre de distracciones.\nInspirado en la ergonomia de las maquinas de\nescribir tradicionales, reune las funciones esenciales\nen un entorno portatil y muy accesible. Cuenta con\nun teclado tactil completo, opciones avanzadas de\nestilos y exportacion a formato universal RTF.\nProyecto bajo licencia Creative Commons.");
+                C2D_TextOptimize(&t2); C2D_DrawText(&t2, C2D_WithColor, 20, 45, 0.7f, 0.36f, 0.36f, COLOR_NEGRO);
             }
         } else {
             float textTopMargin = 10.0f;
@@ -807,10 +836,14 @@ void runEditorLoop() {
         C2D_TargetClear(bottomScreen, C2D_Color32(220, 225, 235, 255));
         C2D_SceneBegin(bottomScreen);
 
-        auto drawCloseX = [&](float bx, float by) {
-            C2D_DrawRectSolid(bx, by, 0.6f, 25, 25, COLOR_ROJO);
+        auto drawCloseX = [&](float bx, float by, bool highlighted) {
+            C2D_DrawRectSolid(bx, by, 0.6f, 25, 25, highlighted ? COLOR_BLANCO : COLOR_ROJO);
+            C2D_DrawRectSolid(bx, by, 0.65f, 25, 2.5f, COLOR_NEGRO);
+            C2D_DrawRectSolid(bx, by + 22.5f, 0.65f, 25, 2.5f, COLOR_NEGRO);
+            C2D_DrawRectSolid(bx, by, 0.65f, 2.5f, 25, COLOR_NEGRO);
+            C2D_DrawRectSolid(bx + 22.5f, by, 0.65f, 2.5f, 25, COLOR_NEGRO);
             C2D_Text xTxt; C2D_TextParse(&xTxt, dynamicBuf, "X"); C2D_TextOptimize(&xTxt);
-            C2D_DrawText(&xTxt, C2D_WithColor, bx + 8, by + 3, 0.7f, 0.45f, 0.45f, COLOR_BLANCO);
+            C2D_DrawText(&xTxt, C2D_WithColor, bx + 7, by + 2, 0.7f, 0.45f, 0.45f, highlighted ? COLOR_ROJO : COLOR_BLANCO);
         };
 
         if (menuAbierto == 1) { 
@@ -818,22 +851,26 @@ void runEditorLoop() {
             C2D_DrawRectSolid(10, 10, 0.5f, 300, 28, COLOR_MUSGO); 
             C2D_Text titleTxt; C2D_TextParse(&titleTxt, dynamicBuf, "AJUSTES DE FORMATO"); C2D_TextOptimize(&titleTxt);
             C2D_DrawText(&titleTxt, C2D_WithColor, 20, 16, 0.6f, 0.42f, 0.42f, COLOR_BLANCO);
-            drawCloseX(275, 12);
+            drawCloseX(275, 12, false);
 
-            C2D_DrawRectSolid(15, 60, 0.6f, 40, 28, formatMenuRow == 0 && formatMenuCol == 0 ? COLOR_MUSGO : C2D_Color32(200, 200, 200, 255));
-            C2D_DrawRectSolid(15, 60, 0.65f, 40, 28, COLOR_NEGRO); 
+            // Casillas de - y + e interlineado con fondo blanco y borde negro
+            C2D_DrawRectSolid(15, 60, 0.6f, 40, 28, formatMenuRow == 0 && formatMenuCol == 0 ? COLOR_MUSGO : COLOR_BLANCO);
+            C2D_DrawRectSolid(15, 60, 0.65f, 40, 2.5f, COLOR_NEGRO); C2D_DrawRectSolid(15, 85.5f, 0.65f, 40, 2.5f, COLOR_NEGRO);
+            C2D_DrawRectSolid(15, 60, 0.65f, 2.5f, 28, COLOR_NEGRO); C2D_DrawRectSolid(52.5f, 60, 0.65f, 2.5f, 28, COLOR_NEGRO);
             C2D_Text minusTxt; C2D_TextParse(&minusTxt, dynamicBuf, "-"); C2D_TextOptimize(&minusTxt); C2D_DrawText(&minusTxt, C2D_WithColor, 32, 63, 0.7f, 0.5f, 0.5f, formatMenuRow == 0 && formatMenuCol == 0 ? COLOR_BLANCO : COLOR_NEGRO);
             
             char sizeStr[32]; snprintf(sizeStr, sizeof(sizeStr), "%d pt", activeStyle.fontSize / 2);
             C2D_Text szTxt; C2D_TextParse(&szTxt, dynamicBuf, sizeStr); C2D_TextOptimize(&szTxt);
             C2D_DrawText(&szTxt, C2D_WithColor, 75, 65, 0.6f, 0.45f, 0.45f, COLOR_NEGRO);
             
-            C2D_DrawRectSolid(135, 60, 0.6f, 40, 28, formatMenuRow == 0 && formatMenuCol == 1 ? COLOR_MUSGO : C2D_Color32(200, 200, 200, 255));
-            C2D_DrawRectSolid(135, 60, 0.65f, 40, 28, COLOR_NEGRO); 
+            C2D_DrawRectSolid(135, 60, 0.6f, 40, 28, formatMenuRow == 0 && formatMenuCol == 1 ? COLOR_MUSGO : COLOR_BLANCO);
+            C2D_DrawRectSolid(135, 60, 0.65f, 40, 2.5f, COLOR_NEGRO); C2D_DrawRectSolid(135, 85.5f, 0.65f, 40, 2.5f, COLOR_NEGRO);
+            C2D_DrawRectSolid(135, 60, 0.65f, 2.5f, 28, COLOR_NEGRO); C2D_DrawRectSolid(172.5f, 60, 0.65f, 2.5f, 28, COLOR_NEGRO);
             C2D_Text plusTxt; C2D_TextParse(&plusTxt, dynamicBuf, "+"); C2D_TextOptimize(&plusTxt); C2D_DrawText(&plusTxt, C2D_WithColor, 151, 63, 0.7f, 0.5f, 0.5f, formatMenuRow == 0 && formatMenuCol == 1 ? COLOR_BLANCO : COLOR_NEGRO);
             
-            C2D_DrawRectSolid(195, 60, 0.6f, 100, 28, formatMenuRow == 3 && formatMenuCol == 0 ? COLOR_MUSGO : C2D_Color32(200, 200, 200, 255));
-            C2D_DrawRectSolid(195, 60, 0.65f, 100, 28, COLOR_NEGRO); 
+            C2D_DrawRectSolid(195, 60, 0.6f, 100, 28, formatMenuRow == 3 && formatMenuCol == 0 ? COLOR_MUSGO : COLOR_BLANCO);
+            C2D_DrawRectSolid(195, 60, 0.65f, 100, 2.5f, COLOR_NEGRO); C2D_DrawRectSolid(195, 85.5f, 0.65f, 100, 2.5f, COLOR_NEGRO);
+            C2D_DrawRectSolid(195, 60, 0.65f, 2.5f, 28, COLOR_NEGRO); C2D_DrawRectSolid(292.5f, 60, 0.65f, 2.5f, 28, COLOR_NEGRO);
             std::string ls = activeStyle.lineSpacing == 0 ? "INT: 1.0 +" : (activeStyle.lineSpacing == 1 ? "INT: 1.2 +" : (activeStyle.lineSpacing == 2 ? "INT: 1.5 +" : "INT: 2.0 +"));
             C2D_Text lsTxt; C2D_TextParse(&lsTxt, dynamicBuf, ls.c_str()); C2D_TextOptimize(&lsTxt); 
             C2D_DrawText(&lsTxt, C2D_WithColor, 205, 66, 0.6f, 0.38f, 0.38f, formatMenuRow == 3 && formatMenuCol == 0 ? COLOR_BLANCO : COLOR_NEGRO);
@@ -851,12 +888,12 @@ void runEditorLoop() {
                 C2D_DrawRectSolid(15 + (c * 34), 190, 0.6f, 26, 26, getPaletteColor(c));
                 if (activeStyle.bgColor == c) C2D_DrawRectSolid(15 + (c * 34), 218, 0.6f, 26, 3, COLOR_NEGRO);
             }
-        } else if (menuAbierto == 2) { 
+        } else if (menuAbierto == 2) { // START
             C2D_DrawRectSolid(10, 10, 0.5f, 300, 230, C2D_Color32(245, 245, 250, 255)); 
             C2D_DrawRectSolid(10, 10, 0.5f, 300, 28, COLOR_MUSGO); 
             C2D_Text titleTxt; C2D_TextParse(&titleTxt, dynamicBuf, "MENU PRINCIPAL"); C2D_TextOptimize(&titleTxt);
             C2D_DrawText(&titleTxt, C2D_WithColor, 20, 16, 0.6f, 0.42f, 0.42f, COLOR_BLANCO);
-            drawCloseX(275, 12);
+            drawCloseX(275, 12, startMenuSel == 5);
             
             auto drawBtn = [&](int idx, float y, const char* label) {
                 u32 bCol = (startMenuSel == idx) ? COLOR_MUSGO : C2D_Color32(220, 220, 225, 255);
@@ -865,16 +902,20 @@ void runEditorLoop() {
                 C2D_Text lTxt; C2D_TextParse(&lTxt, dynamicBuf, label); C2D_TextOptimize(&lTxt);
                 C2D_DrawText(&lTxt, C2D_WithColor, 70, y+5, 0.7f, 0.4f, 0.4f, tCol);
             };
-            drawBtn(0, 50, "GUARDAR"); drawBtn(1, 85, "GUARDAR COMO..."); drawBtn(2, 120, "ABRIR"); drawBtn(3, 155, "MANUAL"); drawBtn(4, 190, "SALIR DEL PROGRAMA");
+            drawBtn(0, 50, "GUARDAR"); 
+            drawBtn(1, 85, "GUARDAR COMO..."); 
+            drawBtn(2, 120, "ABRIR"); 
+            drawBtn(3, 155, "MANUAL DEL USUARIO"); 
+            drawBtn(4, 190, "SALIR DEL PROGRAMA");
             
             C2D_Text foot; C2D_TextParse(&foot, dynamicBuf, "(c) Laura Dev 2026"); C2D_TextOptimize(&foot);
             C2D_DrawText(&foot, C2D_WithColor, 105, 222, 0.7f, 0.35f, 0.35f, C2D_Color32(150,150,150,255));
-        } else if (menuAbierto == 5) { 
+        } else if (menuAbierto == 5) { // ABRIR
             C2D_DrawRectSolid(10, 10, 0.5f, 300, 230, C2D_Color32(245, 245, 250, 255));
             C2D_DrawRectSolid(10, 10, 0.5f, 300, 28, COLOR_MUSGO);
             C2D_Text titleTxt; C2D_TextParse(&titleTxt, dynamicBuf, "ABRIR ARCHIVO (sdmc:/)"); C2D_TextOptimize(&titleTxt);
             C2D_DrawText(&titleTxt, C2D_WithColor, 20, 16, 0.6f, 0.42f, 0.42f, COLOR_BLANCO);
-            drawCloseX(275, 12);
+            drawCloseX(275, 12, false);
             
             for (int i = 0; i < 5 && (fileScroll + i) < (int)fileList.size(); i++) {
                 u32 bCol = (openMenuSel == i) ? COLOR_MUSGO : C2D_Color32(220, 220, 225, 255);
@@ -883,48 +924,55 @@ void runEditorLoop() {
                 C2D_Text fTxt; C2D_TextParse(&fTxt, dynamicBuf, fileList[fileScroll + i].c_str()); C2D_TextOptimize(&fTxt);
                 C2D_DrawText(&fTxt, C2D_WithColor, 30, 55 + (i*30), 0.7f, 0.4f, 0.4f, tCol);
             }
-        } else if (menuAbierto == 6 || menuAbierto == 7) { 
+        } else if (menuAbierto == 6 || menuAbierto == 7) { // MODAL DE CONFIRMACIÓN (SÍ / NO / CRUZ X)
             C2D_DrawRectSolid(30, 50, 0.5f, 260, 140, C2D_Color32(245, 245, 250, 255));
             C2D_DrawRectSolid(30, 50, 0.55f, 260, 26, COLOR_MUSGO);
             C2D_Text mTitle; C2D_TextParse(&mTitle, dynamicBuf, "ATENCION"); C2D_TextOptimize(&mTitle);
             C2D_DrawText(&mTitle, C2D_WithColor, 40, 54, 0.6f, 0.42f, 0.42f, COLOR_BLANCO);
+            drawCloseX(255, 52, confirmSel == 2);
             
             C2D_Text mMsg; 
             if (menuAbierto == 6) C2D_TextParse(&mMsg, dynamicBuf, "¿Estas seguro(a) de que quieres abrir\neste archivo? Se perderan todos los\ncambios no guardados.");
             else C2D_TextParse(&mMsg, dynamicBuf, "¿Estas seguro(a) de que quieres salir\ndel programa? Se perderan todos los\ncambios no guardados.");
             C2D_TextOptimize(&mMsg); C2D_DrawText(&mMsg, C2D_WithColor, 40, 85, 0.6f, 0.36f, 0.36f, COLOR_NEGRO);
             
+            // Botón SÍ
             C2D_DrawRectSolid(70, 135, 0.6f, 70, 25, confirmSel == 0 ? COLOR_MUSGO : C2D_Color32(78, 122, 101, 160));
             C2D_Text tSi; C2D_TextParse(&tSi, dynamicBuf, "SI"); C2D_TextOptimize(&tSi); C2D_DrawText(&tSi, C2D_WithColor, 96, 139, 0.7f, 0.4f, 0.4f, COLOR_BLANCO);
 
+            // Botón NO
             C2D_DrawRectSolid(180, 135, 0.6f, 70, 25, confirmSel == 1 ? COLOR_ROJO : C2D_Color32(220, 50, 50, 160));
             C2D_Text tNo; C2D_TextParse(&tNo, dynamicBuf, "NO"); C2D_TextOptimize(&tNo); C2D_DrawText(&tNo, C2D_WithColor, 206, 139, 0.7f, 0.4f, 0.4f, COLOR_BLANCO);
-        } else if (menuAbierto == 3 || menuAbierto == 4) { 
+        } else if (menuAbierto == 3 || menuAbierto == 4) { // MANUAL
             C2D_DrawRectSolid(0, 0, 0.4f, 320, 240, C2D_Color32(30, 30, 30, 220));
             C2D_DrawRectSolid(5, 5, 0.5f, 310, 230, C2D_Color32(245, 245, 250, 255));
             C2D_DrawRectSolid(5, 5, 0.6f, 310, 3, COLOR_MUSGO); C2D_DrawRectSolid(5, 232, 0.6f, 310, 3, COLOR_MUSGO);
             C2D_DrawRectSolid(5, 5, 0.6f, 3, 230, COLOR_MUSGO); C2D_DrawRectSolid(312, 5, 0.6f, 3, 230, COLOR_MUSGO);
-            drawCloseX(275, 12);
+            drawCloseX(275, 12, menuAbierto == 3 ? (manualMenuSel == 1) : (manualMenuSel == 2));
             
             if (menuAbierto == 3) {
-                C2D_Text t2; C2D_TextParse(&t2, dynamicBuf, "ESTILOS Y FORMATO (PAG 1):\n- N: Negrita. K: Cursiva (Inactiva con cruz).\n- S/T: Subrayado, Tachado o Ambos.\n- ALIN: Alineacion de parrafo.\n- INT: Menu de interlineado y tamano.\n- Menu Aa: Opciones graficas avanzadas.");
-                C2D_TextOptimize(&t2); C2D_DrawText(&t2, C2D_WithColor, 15, 30, 0.7f, 0.42f, 0.42f, COLOR_NEGRO);
-                C2D_DrawRectSolid(180, 190, 0.6f, 110, 25, COLOR_MUSGO);
+                C2D_Text t2; C2D_TextParse(&t2, dynamicBuf, "GUIA TECNICA (PAG 1):\n- Negrita: **N**. Cursiva: **K** (Tachada en rojo).\n- Subrayado y Tachado: **S/T** (Modificadores L/ZL).\n- Alineacion: **ALIN**. Tamano e Interlineado: **INT**.\n- Menu Grafico: **Aa** (con flecha desplegable).");
+                C2D_TextOptimize(&t2); C2D_DrawText(&t2, C2D_WithColor, 15, 30, 0.7f, 0.40f, 0.40f, COLOR_NEGRO);
+                
+                C2D_DrawRectSolid(180, 190, 0.6f, 110, 25, manualMenuSel == 0 ? COLOR_BLANCO : COLOR_MUSGO);
                 C2D_Text nTxt; C2D_TextParse(&nTxt, dynamicBuf, "SIGUIENTE >"); C2D_TextOptimize(&nTxt);
-                C2D_DrawText(&nTxt, C2D_WithColor, 190, 195, 0.7f, 0.45f, 0.45f, COLOR_BLANCO);
+                C2D_DrawText(&nTxt, C2D_WithColor, 190, 195, 0.7f, 0.45f, 0.45f, manualMenuSel == 0 ? COLOR_MUSGO : COLOR_BLANCO);
             } else {
-                C2D_Text t3; C2D_TextParse(&t3, dynamicBuf, "Usa D-PAD para navegar los botones inferiores y A\npara confirmar la accion seleccionada en modales.\n- El programa esta adaptado a licencias libres.\n¡Disfruta de tu escritura fluida!");
+                C2D_Text t3; C2D_TextParse(&t3, dynamicBuf, "Navega todos los botones y modales usando la\ncruzeta (D-PAD) y confirma tus acciones con el\nboton A. Disfruta de una escritura comoda.");
                 C2D_TextOptimize(&t3); C2D_DrawText(&t3, C2D_WithColor, 15, 30, 0.7f, 0.40f, 0.40f, COLOR_NEGRO);
                 
-                C2D_DrawRectSolid(20, 190, 0.6f, 100, 25, COLOR_MUSGO);
+                // Botón Anterior
+                C2D_DrawRectSolid(20, 190, 0.6f, 100, 25, manualMenuSel == 0 ? COLOR_BLANCO : COLOR_MUSGO);
                 C2D_Text aTxt; C2D_TextParse(&aTxt, dynamicBuf, "< ANTERIOR"); C2D_TextOptimize(&aTxt);
-                C2D_DrawText(&aTxt, C2D_WithColor, 30, 195, 0.7f, 0.40f, 0.40f, COLOR_BLANCO);
+                C2D_DrawText(&aTxt, C2D_WithColor, 30, 195, 0.7f, 0.40f, 0.40f, manualMenuSel == 0 ? COLOR_MUSGO : COLOR_BLANCO);
 
-                C2D_DrawRectSolid(140, 190, 0.6f, 110, 25, COLOR_MUSGO);
+                // Botón Cerrar
+                C2D_DrawRectSolid(140, 190, 0.6f, 110, 25, manualMenuSel == 1 ? COLOR_BLANCO : COLOR_MUSGO);
                 C2D_Text cTxt; C2D_TextParse(&cTxt, dynamicBuf, "CERRAR"); C2D_TextOptimize(&cTxt);
-                C2D_DrawText(&cTxt, C2D_WithColor, 172, 195, 0.7f, 0.40f, 0.40f, COLOR_BLANCO);
+                C2D_DrawText(&cTxt, C2D_WithColor, 172, 195, 0.7f, 0.40f, 0.40f, manualMenuSel == 1 ? COLOR_MUSGO : COLOR_BLANCO);
             }
         } else {
+            // Teclado
             for (int i = 0; i < (int)keys.size(); i++) {
                 const auto& key = keys[i];
                 u32 cFondo = C2D_Color32(255, 255, 255, 255); u32 cTexto = COLOR_NEGRO;
@@ -934,7 +982,7 @@ void runEditorLoop() {
                 if (key.type >= 5 && key.type != 7 && key.type != 10) {
                     bool activo = false;
                     if (key.base == "N") activo = activeStyle.bold;
-                    else if (key.base == "K") activo = false; 
+                    else if (key.base == "K") activo = activeStyle.italic; 
                     else if (key.base == "S") {
                         if (isZLHeld) activo = (activeStyle.underline && activeStyle.strike);
                         else if (isLHeld) activo = activeStyle.strike;
@@ -993,57 +1041,35 @@ void runEditorLoop() {
                         if (isZLHeld) mainChar = "S/T"; else if (isLHeld) mainChar = "T"; else mainChar = "S";
                         txX = (key.w/2.0f) - 8.0f;
                     }
-                    if (key.type == 10) { 
-                        if (isZLHeld) { mainChar = "<<-"; txX = (key.w/2.0f) - 10.0f; } 
-                        else if (isLHeld) { mainChar = "<-+"; txX = (key.w/2.0f) - 10.0f; } 
-                        else mainChar = "<-";
-                    }
-                    
-                    if (key.type == 2) { 
-                        if (isLHeld) {
-                            mainChar = ""; 
-                            u32 cSec = C2D_Color32(110, 110, 120, 200);
-                            float cX = key.x + (key.w / 2.0f) - 10.0f;
-                            C2D_DrawRectSolid(cX, key.y + 13.0f, 0.4f, 15.0f, 1.5f, cSec);
-                            C2D_DrawRectSolid(cX + 10.0f, key.y + 10.0f, 0.4f, 1.5f, 7.0f, cSec);
-                            C2D_DrawRectSolid(cX + 11.0f, key.y + 11.0f, 0.4f, 1.5f, 5.0f, cSec);
-                            C2D_DrawRectSolid(cX + 12.0f, key.y + 12.0f, 0.4f, 1.5f, 3.0f, cSec);
-                            C2D_DrawRectSolid(cX + 17.0f, key.y + 9.0f, 0.4f, 2.0f, 9.0f, cSec);
-                        } else if (isZLHeld || isZRHeld) {
-                            mainChar = ""; 
-                            u32 cSec = C2D_Color32(110, 110, 120, 200);
-                            float rX = key.x + (key.w / 2.0f) - 12.0f; float rY = key.y + 9.0f;
-                            C2D_DrawRectSolid(rX, rY, 0.4f, 10.0f, 1.5f, cSec);
-                            C2D_DrawRectSolid(rX, rY+3.0f, 0.4f, 10.0f, 1.5f, cSec);
-                            C2D_DrawRectSolid(rX, rY+6.0f, 0.4f, 10.0f, 1.5f, cSec);
-                            C2D_DrawRectSolid(rX, rY+9.0f, 0.4f, 10.0f, 1.5f, cSec);
-                            C2D_DrawRectSolid(rX+12.0f, rY+4.0f, 0.4f, 10.0f, 1.5f, C2D_Color32(100,160,220,255)); 
-                            C2D_DrawRectSolid(rX+19.0f, rY+2.0f, 0.4f, 1.5f, 5.0f, C2D_Color32(100,160,220,255)); 
+                    if (key.type == 10) { // Iconos vectoriales limpios de retroceso
+                        mainChar = "";
+                        u32 cIc = cTexto;
+                        float rx = key.x + (key.w / 2.0f) - (isZLHeld ? 14.0f : (isLHeld ? 12.0f : 8.0f));
+                        float ry = key.y + 11.0f;
+                        if (isZLHeld) {
+                            C2D_DrawRectSolid(rx, ry + 3.0f, 0.4f, 14.0f, 2.0f, cIc);
+                            C2D_DrawTriangle(rx, ry + 4.0f, 0.4f, rx + 6.0f, ry - 2.0f, 0.4f, rx + 6.0f, ry + 10.0f, 0.4f, cIc);
+                            C2D_DrawRectSolid(rx + 16.0f, ry + 3.0f, 0.4f, 10.0f, 2.0f, cIc);
+                            C2D_DrawTriangle(rx + 16.0f, ry + 4.0f, 0.4f, rx + 22.0f, ry - 2.0f, 0.4f, rx + 22.0f, ry + 10.0f, 0.4f, cIc);
+                        } else if (isLHeld) {
+                            C2D_DrawRectSolid(rx, ry + 3.0f, 0.4f, 12.0f, 2.0f, cIc);
+                            C2D_DrawTriangle(rx, ry + 4.0f, 0.4f, rx + 6.0f, ry - 2.0f, 0.4f, rx + 6.0f, ry + 10.0f, 0.4f, cIc);
+                            C2D_DrawRectSolid(rx + 15.0f, ry + 2.0f, 0.4f, 2.0f, 8.0f, cIc);
+                            C2D_DrawRectSolid(rx + 12.0f, ry + 5.0f, 0.4f, 8.0f, 2.0f, cIc);
                         } else {
-                            mainChar = "ESPACIO"; txX = (key.w / 2.0f) - 25.0f;
-                            u32 cSec = C2D_Color32(110, 110, 120, 200);
-                            C2D_DrawRectSolid(key.x + 8.0f, key.y + 13.0f, 0.4f, 15.0f, 1.5f, cSec);
-                            C2D_DrawRectSolid(key.x + 18.0f, key.y + 10.0f, 0.4f, 1.5f, 7.0f, cSec);
-                            C2D_DrawRectSolid(key.x + 19.0f, key.y + 11.0f, 0.4f, 1.5f, 5.0f, cSec);
-                            C2D_DrawRectSolid(key.x + 20.0f, key.y + 12.0f, 0.4f, 1.5f, 3.0f, cSec);
-                            C2D_DrawRectSolid(key.x + 25.0f, key.y + 9.0f, 0.4f, 2.0f, 9.0f, cSec);
-                            
-                            float rx = key.x + key.w - 30.0f; float ry = key.y + 9.0f;
-                            C2D_DrawRectSolid(rx, ry, 0.4f, 10.0f, 1.5f, cSec);
-                            C2D_DrawRectSolid(rx, ry+3.0f, 0.4f, 10.0f, 1.5f, cSec);
-                            C2D_DrawRectSolid(rx, ry+6.0f, 0.4f, 10.0f, 1.5f, cSec);
-                            C2D_DrawRectSolid(rx, ry+9.0f, 0.4f, 10.0f, 1.5f, cSec);
-                            C2D_DrawRectSolid(rx+12.0f, ry+4.0f, 0.4f, 10.0f, 1.5f, C2D_Color32(100,160,220,255)); 
-                            C2D_DrawRectSolid(rx+19.0f, ry+2.0f, 0.4f, 1.5f, 5.0f, C2D_Color32(100,160,220,255)); 
+                            C2D_DrawRectSolid(rx, ry + 3.0f, 0.4f, 14.0f, 2.0f, cIc);
+                            C2D_DrawTriangle(rx, ry + 4.0f, 0.4f, rx + 7.0f, ry - 2.0f, 0.4f, rx + 7.0f, ry + 10.0f, 0.4f, cIc);
                         }
                     }
                     
-                    C2D_Text keyLabel; C2D_TextParse(&keyLabel, dynamicBuf, mainChar.c_str()); C2D_TextOptimize(&keyLabel);
-                    C2D_DrawText(&keyLabel, C2D_WithColor, key.x + txX, key.y + txY, 0.5f, sX, sX, cTexto);
+                    if (key.type != 10) {
+                        C2D_Text keyLabel; C2D_TextParse(&keyLabel, dynamicBuf, mainChar.c_str()); C2D_TextOptimize(&keyLabel);
+                        C2D_DrawText(&keyLabel, C2D_WithColor, key.x + txX, key.y + txY, 0.5f, sX, sX, cTexto);
+                    }
 
-                    if (key.base == "K") {
-                        C2D_DrawRectSolid(key.x + 4, key.y + key.h/2.0f - 1, 0.45f, key.w - 8, 2.0f, COLOR_ROJO);
-                        C2D_DrawRectSolid(key.x + 4, key.y + 4, 0.46f, 2.0f, key.h - 8, COLOR_NEGRO);
+                    // Tacha la K en rojo si está activa (cursiva)
+                    if (key.base == "K" && activeStyle.italic) {
+                        C2D_DrawRectSolid(key.x + 4, key.y + 4, 0.45f, key.w - 8, 2.5f, COLOR_ROJO);
                     }
                 }
                 
