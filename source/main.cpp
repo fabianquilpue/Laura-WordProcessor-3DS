@@ -1,6 +1,7 @@
 #include <3ds.h>
 #include <citro2d.h>
 
+// Declaración de la función principal del editor definida en editor.cpp
 void runEditorLoop();
 
 int main(int argc, char* argv[]) {
