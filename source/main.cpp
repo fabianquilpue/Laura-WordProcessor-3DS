@@ -705,4 +705,26 @@ int main(int argc, char* argv[]) {
                 C2D_DrawRectSolid(key.x + (key.w / 2.0f) - 9.0f, key.y + (key.h / 2.0f) - 0.5f, 0.85f, 18.0f, 2.0f, colorTexto);
             }
 
-            if (!isLHeld && !isZLHeld && (key.type ==
+            if (!isLHeld && !isZLHeld && (key.type == 0 || key.type == 4 || key.type == 2)) {
+                if (!key.shift.empty() && key.shift != key.base) {
+                    C2D_Text shiftLbl; C2D_TextParse(&shiftLbl, dynamicBuf, key.shift.c_str()); C2D_TextOptimize(&shiftLbl);
+                    C2D_DrawText(&shiftLbl, C2D_WithColor, key.x + 2.0f, key.y + 1.0f, 0.5f, 0.20f, 0.20f, C2D_Color32(110, 110, 120, 200));
+                }
+                if (!key.ctrlAlt.empty()) {
+                    C2D_Text ctrlLbl; C2D_TextParse(&ctrlLbl, dynamicBuf, key.ctrlAlt.c_str()); C2D_TextOptimize(&ctrlLbl);
+                    C2D_DrawText(&ctrlLbl, C2D_WithColor, key.x + key.w - 10.0f, key.y + 1.0f, 0.5f, 0.20f, 0.20f, C2D_Color32(180, 80, 80, 220));
+                }
+            }
+        }
+
+        C2D_DrawRectSolid(0, 215, 0.4f, 320, 25, C2D_Color32(50, 60, 70, 255));
+        C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado); C2D_TextOptimize(&statusRenderText);
+        C2D_DrawText(&statusRenderText, C2D_WithColor, 10.0f, 219.0f, 0.5f, 0.36f, 0.36f, C2D_Color32(255, 255, 255, 255));
+
+        C3D_FrameEnd(0);
+    }
+
+    C2D_TextBufDelete(dynamicBuf);
+    ptmuExit(); C2D_Fini(); C3D_Fini(); gfxExit();
+    return 0;
+}
