@@ -404,7 +404,7 @@ int main(int argc, char* argv[]) {
                 }
             } else {
                 if (!undoStack.empty()) {
-                    redoStack.push_back({documento, cursorPos});
+                    undoStack.push_back({documento, cursorPos});
                     EditorState st = undoStack.back(); undoStack.pop_back();
                     documento = st.doc; cursorPos = std::min(st.cursor, documento.size());
                 }
@@ -539,4 +539,20 @@ int main(int argc, char* argv[]) {
                 else if (effectiveShift && !key.shift.empty()) charToAdd = key.shift;
 
                 if (estadoTeclaMuerta > 0 && charToAdd.length() == 1 && ((charToAdd[0] >= 'a' && charToAdd[0] <= 'z') || (charToAdd[0] >= 'A' && charToAdd[0] <= 'Z'))) {
-                    std::string acc = aplicarTeclaMuerta(charToAdd[0], estado
+                    std::string acc = aplicarTeclaMuerta(charToAdd[0], estadoTeclaMuerta);
+                    documento.insert(documento.begin() + cursorPos, {acc, activeStyle});
+                    cursorPos++; estadoTeclaMuerta = 0;
+                } else {
+                    if (estadoTeclaMuerta > 0) {
+                        std::string dead = (estadoTeclaMuerta == 1 ? "´" : (estadoTeclaMuerta == 2 ? "¨" : "`"));
+                        documento.insert(documento.begin() + cursorPos, {dead, activeStyle});
+                        cursorPos++; estadoTeclaMuerta = 0;
+                    }
+                    documento.insert(documento.begin() + cursorPos, {charToAdd, activeStyle});
+                    cursorPos++;
+                }
+            } else if (key.type == 2) {
+                pushUndo(); deleteSelectionIfAny();
+                if (estadoTeclaMuerta > 0) {
+                    std::string dead = (estadoTeclaMuerta == 1 ? "´" : (estadoTeclaMuerta == 2 ? "¨" : "`"));
+                    documento.insert(documento.begin() + cursorPos
