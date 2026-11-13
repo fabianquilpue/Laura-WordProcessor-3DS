@@ -11,7 +11,7 @@ struct KeyButton {
     std::string base;
     std::string shift;
     std::string ctrlAlt;
-    int type; // 0 = texto, 2 = espacio, 3 = guardar, 4 = tecla muerta (tilde)
+    int type; // 0 = texto, 2 = espacio, 3 = guardar, 4 = tecla muerta (tilde), 5 = formato (B/I/U)
 };
 
 // Función para guardar el documento en la tarjeta SD
@@ -108,15 +108,22 @@ int main(int argc, char* argv[]) {
     // 2. Construcción del teclado ergonómico (Pantalla inferior 320x240)
     std::vector<KeyButton> keys;
     float btnW = 29.5f; 
-    float btnH = 24.0f; 
+    float btnH = 22.0f; 
     float gap = 2.0f;
 
-    // Fila 1: Numérica exacta (Actualizada con 8 y 9 en sus nuevos estados)
+    // Fila superior de Formato RTF (B, I, U)
+    float fmt_y = 6.0f;
+    float fmt_w = 98.0f;
+    keys.push_back({8.0f, fmt_y, fmt_w, 18.0f, "NEGRITA (B)", "NEGRITA (B)", "NEGRITA (B)", 5});
+    keys.push_back({111.0f, fmt_y, fmt_w, 18.0f, "CURSIVA (I)", "CURSIVA (I)", "CURSIVA (I)", 5});
+    keys.push_back({214.0f, fmt_y, fmt_w, 18.0f, "SUBRAYADO (U)", "SUBRAYADO (U)", "SUBRAYADO (U)", 5});
+
+    // Fila 1: Numérica exacta
     std::string r1_base[10]  = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
     std::string r1_shift[10] = {"|", "*", "·", "$", "%", "&", "/", "(", ")", "="};
     std::string r1_ctrl[10]  = {"",  "@", "#", "ª", "+", "¬", "\\", "[", "]", "º"};
     float f1_x = 8.0f;
-    float f1_y = 12.0f;
+    float f1_y = 28.0f;
     for (int i = 0; i < 10; i++) {
         keys.push_back({f1_x + i * (btnW + gap), f1_y, btnW, btnH, r1_base[i], r1_shift[i], r1_ctrl[i], 0});
     }
@@ -150,7 +157,6 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < 9; i++) {
         keys.push_back({f4_x + i * (btnW + gap), f4_y, btnW, btnH, r4_base[i], r4_shift[i], r4_ctrl[i], 0});
     }
-    // Décima tecla de la fila 4 es la Tilde (Tecla Muerta)
     keys.push_back({f4_x + 9 * (btnW + gap), f4_y, btnW, btnH, r4_base[9], r4_shift[9], r4_ctrl[9], 4});
 
     // Fila 5: Puntuación exacta
@@ -162,15 +168,22 @@ int main(int argc, char* argv[]) {
         keys.push_back({f5_x + i * (btnW + gap), f5_y, btnW, btnH, puncs_b[i], puncs_s[i], "", 0});
     }
 
-    // Fila 6: Barra Espaciadora amplia y Botón Guardar
+    // Fila 6: Barra Espaciadora con etiqueta "ESPACIO / TAB" y Botón Guardar
     float f6_y = f5_y + btnH + 3.0f;
-    keys.push_back({8.0f, f6_y, 185.0f, 25.0f, "ESPACIO", "TAB", " ", 2});
-    keys.push_back({198.0f, f6_y, 114.0f, 25.0f, "GUARDAR", "GUARDAR", "GUARDAR", 3});
+    keys.push_back({8.0f, f6_y, 185.0f, 22.0f, "ESPACIO / TAB", "ESPACIO / TAB", " ", 2});
+    keys.push_back({198.0f, f6_y, 114.0f, 22.0f, "GUARDAR", "GUARDAR", "GUARDAR", 3});
 
     std::string documento = "";
     std::string estadoMensaje = "Listo para escribir.";
     int estadoTeclaMuerta = 0; 
     int backspaceCooldown = 0;
+
+    // Estados de modificadores y formato
+    bool capsLock = false;
+    u64 lastLPressTick = 0;
+    bool isBold = false;
+    bool isItalic = false;
+    bool isUnderline = false;
 
     // 3. Bucle principal de la aplicación
     while (aptMainLoop()) {
@@ -180,9 +193,20 @@ int main(int argc, char* argv[]) {
 
         if (kDown & KEY_START) break;
 
-        bool isShift = (kHeld & KEY_L);
+        // Doble clic en L para CAPS LOCK
+        if (kDown & KEY_L) {
+            u64 currentTick = osGetTime();
+            if (currentTick - lastLPressTick < 300) {
+                capsLock = !capsLock;
+                lastLPressTick = 0;
+            } else {
+                lastLPressTick = currentTick;
+            }
+        }
+
+        bool isShift = (kHeld & KEY_L) || capsLock;
         bool isCtrlAlt = (kHeld & KEY_ZL);
-        bool isEnter = (kDown & KEY_R);
+        bool isEnterTrigger = (kDown & KEY_R);
         
         bool isBackspaceTrigger = false;
         if (kDown & KEY_ZR) {
@@ -204,15 +228,13 @@ int main(int argc, char* argv[]) {
             estadoMensaje = isShift ? "Borrada palabra." : (isCtrlAlt ? "Borrada linea." : "Borrado.");
         }
 
-        if (isEnter) {
-            if (isShift) {
-                documento += "\n\n"; 
-                estadoMensaje = "Salto de parrafo.";
-            } else if (isCtrlAlt) {
-                documento += "\n--- [PAGINA] ---\n"; 
+        // Lógica de Enter y Salto de página (R y ZL + R)
+        if (isEnterTrigger) {
+            if (isCtrlAlt) {
+                documento += "\n--- [PAGINA NUEVA] ---\n"; // ZL + R = Salto de página
                 estadoMensaje = "Salto de pagina.";
             } else {
-                documento += "\n"; 
+                documento += "\n"; // R = Enter normal (salto de línea)
                 estadoMensaje = "Enter.";
             }
         }
@@ -221,11 +243,17 @@ int main(int argc, char* argv[]) {
         hidTouchRead(&touch);
 
         if (kDown & KEY_TOUCH) {
-            for (const auto& key : keys) {
+            for (auto& key : keys) {
                 if (touch.px >= key.x && touch.px <= (key.x + key.w) &&
                     touch.py >= key.y && touch.py <= (key.y + key.h)) {
                     
-                    if (key.type == 4) { // Tecla muerta
+                    if (key.type == 5) { // Botones de formato RTF (B, I, U)
+                        if (key.base.find("NEGRITA") != std::string::npos) isBold = !isBold;
+                        else if (key.base.find("CURSIVA") != std::string::npos) isItalic = !isItalic;
+                        else if (key.base.find("SUBRAYADO") != std::string::npos) isUnderline = !isUnderline;
+                        estadoMensaje = "Formato actualizado.";
+                    }
+                    else if (key.type == 4) { // Tecla muerta
                         if (isCtrlAlt) estadoTeclaMuerta = 3; 
                         else if (isShift) estadoTeclaMuerta = 2; 
                         else estadoTeclaMuerta = 1; 
@@ -254,14 +282,14 @@ int main(int argc, char* argv[]) {
                         }
                         estadoMensaje = "Agregado: " + charToAdd;
                     } 
-                    else if (key.type == 2) { // Espacio / Tab
+                    else if (key.type == 2) { // Espacio / Tab limpio (5 espacios)
                         if (estadoTeclaMuerta > 0) {
                             documento += (estadoTeclaMuerta == 1 ? "´" : (estadoTeclaMuerta == 2 ? "¨" : "`"));
                             estadoTeclaMuerta = 0;
                         }
-                        if (isShift) documento += "\t";
+                        if (isShift) documento += "     "; // 5 espacios limpios
                         else documento += " ";
-                        estadoMensaje = isShift ? "Tabulacion." : "Espacio.";
+                        estadoMensaje = isShift ? "Tabulacion (5 espacios)." : "Espacio.";
                     } 
                     else if (key.type == 3) { // Guardar
                         if (guardarEnSD(documento)) {
@@ -285,11 +313,13 @@ int main(int argc, char* argv[]) {
         C2D_TextParse(&docRenderText, dynamicBuf, textoConCursor.c_str());
         C2D_TextOptimize(&docRenderText);
 
-        int palabras = contarPalabras(documento);
-        int caracteres = documento.length();
         char infoEstado[128];
-        snprintf(infoEstado, sizeof(infoEstado), "Palabras: %d | Caracteres: %d | L:%s ZL:%s", 
-                 palabras, caracteres, isShift ? "ON" : "OFF", isCtrlAlt ? "ON" : "OFF");
+        snprintf(infoEstado, sizeof(infoEstado), "Pal: %d | L:%s%s ZL:%s | B:%d I:%d U:%d", 
+                 contarPalabras(documento), 
+                 isShift ? (capsLock ? "CAPS" : "ON") : "OFF", 
+                 capsLock ? "*" : "", 
+                 isCtrlAlt ? "ON" : "OFF",
+                 isBold, isItalic, isUnderline);
 
         C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado);
         C2D_TextOptimize(&statusRenderText);
@@ -316,6 +346,17 @@ int main(int argc, char* argv[]) {
             if (key.type == 3) { // Guardar
                 colorFondo = C2D_Color32(65, 130, 190, 255);
                 colorTexto = C2D_Color32(255, 255, 255, 255);
+            } else if (key.type == 5) { // Botones de Formato RTF
+                bool activo = (key.base.find("NEGRITA") != std::string::npos && isBold) ||
+                              (key.base.find("CURSIVA") != std::string::npos && isItalic) ||
+                              (key.base.find("SUBRAYADO") != std::string::npos && isUnderline);
+                if (activo) {
+                    colorFondo = C2D_Color32(90, 105, 120, 255);
+                    colorTexto = C2D_Color32(255, 255, 255, 255);
+                } else {
+                    colorFondo = C2D_Color32(200, 205, 215, 255);
+                    colorTexto = C2D_Color32(60, 65, 75, 255);
+                }
             } else if (key.type == 4 && estadoTeclaMuerta > 0) {
                 colorFondo = C2D_Color32(230, 180, 100, 255);
             }
@@ -323,15 +364,21 @@ int main(int argc, char* argv[]) {
             C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, colorFondo);
 
             std::string mainChar = key.base;
-            if (isShift && isCtrlAlt && key.base == "c") mainChar = "Ç";
-            else if (isCtrlAlt && !key.ctrlAlt.empty()) mainChar = key.ctrlAlt;
-            else if (isShift && !key.shift.empty()) mainChar = key.shift;
-            if (key.type > 0 && key.type != 4) mainChar = key.base;
+            if (key.type == 5) {
+                if (key.base.find("NEGRITA") != std::string::npos) mainChar = "B";
+                else if (key.base.find("CURSIVA") != std::string::npos) mainChar = "I";
+                else if (key.base.find("SUBRAYADO") != std::string::npos) mainChar = "U";
+            } else {
+                if (isShift && isCtrlAlt && key.base == "c") mainChar = "Ç";
+                else if (isCtrlAlt && !key.ctrlAlt.empty()) mainChar = key.ctrlAlt;
+                else if (isShift && !key.shift.empty()) mainChar = key.shift;
+                if (key.type > 0 && key.type != 4 && key.type != 2) mainChar = key.base;
+            }
 
             C2D_Text keyLabel;
             C2D_TextParse(&keyLabel, dynamicBuf, mainChar.c_str());
             C2D_TextOptimize(&keyLabel);
-            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + (key.w / 2.0f) - 4.0f, key.y + 4.0f, 0.5f, 0.40f, 0.40f, colorTexto);
+            C2D_DrawText(&keyLabel, C2D_WithColor, key.x + (key.w / 2.0f) - 6.0f, key.y + (key.type == 5 ? 2.0f : 4.0f), 0.5f, key.type == 5 ? 0.35f : 0.38f, key.type == 5 ? 0.35f : 0.38f, colorTexto);
 
             if (!isShift && !isCtrlAlt && (key.type == 0 || key.type == 4)) {
                 if (!key.shift.empty() && key.shift != key.base) {
@@ -352,7 +399,7 @@ int main(int argc, char* argv[]) {
         C2D_DrawRectSolid(0, 215, 0.4f, 320, 25, C2D_Color32(50, 60, 70, 255));
         C2D_TextParse(&statusRenderText, dynamicBuf, infoEstado);
         C2D_TextOptimize(&statusRenderText);
-        C2D_DrawText(&statusRenderText, C2D_WithColor, 10.0f, 219.0f, 0.5f, 0.40f, 0.40f, C2D_Color32(255, 255, 255, 255));
+        C2D_DrawText(&statusRenderText, C2D_WithColor, 10.0f, 219.0f, 0.5f, 0.35f, 0.35f, C2D_Color32(255, 255, 255, 255));
 
         C3D_FrameEnd(0);
     }
