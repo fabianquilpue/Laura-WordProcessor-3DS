@@ -16,6 +16,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Dependencies
+        run: |
+          dkp-pacman -S --noconfirm dkp-pacman devkitpro-keyring || true
+          dkp-pacman -Syu --noconfirm || true
+          dkp-pacman -S --noconfirm citro2d citro3d libctru 3dstools
+          pacman -S --noconfirm python || true
+
       - name: Build Laura 3DS
         run: |
           export DEVKITPRO=/opt/devkitpro
