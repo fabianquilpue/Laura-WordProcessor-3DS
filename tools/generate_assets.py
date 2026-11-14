@@ -9,12 +9,12 @@ def generate_assets():
     os.makedirs("romfs", exist_ok=True)
     os.makedirs("data", exist_ok=True)
 
-    # Generar icono por defecto si no existe
+    # Generar icono por defecto de 48x48 si no existe
     icon_path = "assets/icon.png"
     if not os.path.exists(icon_path):
         img = Image.new('RGBA', (48, 48), (78, 122, 101, 255))
         d = ImageDraw.Draw(img)
-        d.text((12, 12), "L", fill=(255, 255, 255, 255))
+        d.text((14, 10), "L", fill=(255, 255, 255, 255))
         img.save(icon_path)
 
     # Generar splash screen PNG
@@ -27,12 +27,11 @@ def generate_assets():
     splash_t3x = "romfs/splash.t3x"
     try:
         if subprocess.run(["which", "tex3ds"], capture_output=True).returncode == 0:
-            # Sintaxis correcta de tex3ds: -o <output> <input>
             subprocess.run(["tex3ds", "-o", splash_t3x, splash_png], check=True)
         else:
             img.save(splash_t3x)
     except Exception as e:
-        print(f"Advertencia al ejecutar tex3ds: {e}. Usando respaldo de respaldo.")
+        print(f"Advertencia al ejecutar tex3ds: {e}. Usando respaldo.")
         img.save(splash_t3x)
 
     print("¡Recursos listos!")
