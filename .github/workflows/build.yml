@@ -16,11 +16,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Python, Pillow and bannertool
+      - name: Install Python, Pillow and tools
         run: |
           apt-get update
           apt-get install -y python3 python3-pil
-          dkp-pacman -S --noconfirm citro2d citro3d libctru 3dstools bannertool || true
+          dkp-pacman -S --noconfirm citro2d citro3d libctru 3dstools
 
       - name: Build Laura 3DS
         run: |
@@ -37,5 +37,4 @@ jobs:
           name: Laura-WordProcessor-3DS
           path: |
             Laura.3dsx
-            Laura.cia
             Laura.smdh
