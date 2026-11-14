@@ -128,17 +128,29 @@ std::string aplicarTeclaMuerta(char vocal, int tipoMuerta) {
     bool isUpper = (vocal >= 'A' && vocal <= 'Z'); 
     char vL = isUpper ? (vocal + 32) : vocal;
     if (tipoMuerta == 1) {
-        if (vL=='a') return isUpper?"Á":"á"; if (vL=='e') return isUpper?"É":"é"; if (vL=='i') return isUpper?"Í":"í";
-        if (vL=='o') return isUpper?"Ó":"ó"; if (vL=='u') return isUpper?"Ú":"ú";
+        if (vL=='a') return isUpper?"Á":"á";
+        if (vL=='e') return isUpper?"É":"é";
+        if (vL=='i') return isUpper?"Í":"í";
+        if (vL=='o') return isUpper?"Ó":"ó";
+        if (vL=='u') return isUpper?"Ú":"ú";
     } else if (tipoMuerta == 2) {
-        if (vL=='a') return isUpper?"Ä":"ä"; if (vL=='e') return isUpper?"Ë":"ë"; if (vL=='i') return isUpper?"Ï":"ï";
-        if (vL=='o') return isUpper?"Ö":"ö"; if (vL=='u') return isUpper?"Ü":"ü";
+        if (vL=='a') return isUpper?"Ä":"ä";
+        if (vL=='e') return isUpper?"Ë":"ë";
+        if (vL=='i') return isUpper?"Ï":"ï";
+        if (vL=='o') return isUpper?"Ö":"ö";
+        if (vL=='u') return isUpper?"Ü":"ü";
     } else if (tipoMuerta == 3) {
-        if (vL=='a') return isUpper?"À":"à"; if (vL=='e') return isUpper?"È":"è"; if (vL=='i') return isUpper?"Ì":"ì";
-        if (vL=='o') return isUpper?"Ò":"ò"; if (vL=='u') return isUpper?"Ù":"ù";
+        if (vL=='a') return isUpper?"À":"à";
+        if (vL=='e') return isUpper?"È":"è";
+        if (vL=='i') return isUpper?"Ì":"ì";
+        if (vL=='o') return isUpper?"Ò":"ò";
+        if (vL=='u') return isUpper?"Ù":"ù";
     } else if (tipoMuerta == 4) {
-        if (vL=='a') return isUpper?"Â":"â"; if (vL=='e') return isUpper?"Ê":"ê"; if (vL=='i') return isUpper?"Î":"î";
-        if (vL=='o') return isUpper?"Ô":"ô"; if (vL=='u') return isUpper?"Û":"û";
+        if (vL=='a') return isUpper?"Â":"â";
+        if (vL=='e') return isUpper?"Ê":"ê";
+        if (vL=='i') return isUpper?"Î":"î";
+        if (vL=='o') return isUpper?"Ô":"ô";
+        if (vL=='u') return isUpper?"Û":"û";
     } else if (tipoMuerta == 5) {
         if (vL=='n') return isUpper?"Ñ":"ñ";
     }
@@ -998,4 +1010,104 @@ void runEditorLoop() {
                 const auto& key = keys[i];
                 u32 cFondo = C2D_Color32(245, 245, 250, 255); u32 cTexto = COLOR_NEGRO;
 
-                if (i == activeTouchKeyIdx) cFondo = C2D_Color32(210, 2
+                if (i == activeTouchKeyIdx) cFondo = C2D_Color32(210, 225, 245, 255);
+                
+                if (key.type >= 5 && key.type != 7 && key.type != 10) {
+                    bool activo = false;
+                    if (key.base == "N") activo = boldActive;
+                    else if (key.base == "K") activo = italicActive; 
+                    else if (key.base == "S") {
+                        if (isZLHeld) activo = (underlineActive && strikeActive);
+                        else if (isLHeld) activo = strikeActive;
+                        else activo = underlineActive;
+                    }
+                    else if (key.type == 9) activo = showPilcrow;
+                    
+                    if (key.base == "K" && italicActive) {
+                        cFondo = COLOR_ROJO; cTexto = COLOR_BLANCO;
+                    } else if (activo) { 
+                        cFondo = COLOR_MUSGO; cTexto = COLOR_BLANCO; 
+                    } else { 
+                        if (key.base == "N" || key.base == "K" || key.base == "S" || key.type == 6 || key.type == 7 || key.type == 9) {
+                            cFondo = C2D_Color32(180, 185, 195, 255); 
+                        } else {
+                            cFondo = C2D_Color32(200, 205, 215, 255); 
+                        }
+                        cTexto = C2D_Color32(60, 65, 75, 255); 
+                    }
+                }
+                
+                if (key.type == 10) { cFondo = C2D_Color32(200, 205, 215, 255); cTexto = C2D_Color32(60, 65, 75, 255); }
+                
+                if ((key.base == "´" || key.ctrlAlt == "^" || key.shift == "¨") && estadoTeclaMuerta > 0) {
+                    cFondo = COLOR_MUSGO; cTexto = COLOR_BLANCO;
+                }
+
+                // Borde simple restaurado
+                C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, cFondo);
+                C2D_DrawRectSolid(key.x, key.y + key.h - 1.5f, 0.35f, key.w, 1.5f, C2D_Color32(150, 155, 165, 255));
+
+                if (key.type == 7) {
+                    C2D_DrawTriangle(key.x + key.w - 10, key.y + 4, 0.4f,
+                                     key.x + key.w - 4,  key.y + 10, 0.4f,
+                                     key.x + key.w - 4,  key.y + 4,  0.4f, COLOR_MUSGO);
+                    C2D_DrawRectSolid(key.x, key.y, 0.35f, key.w, 1.5f, COLOR_MUSGO);
+                    C2D_DrawRectSolid(key.x, key.y + key.h - 1.5f, 0.35f, key.w, 1.5f, COLOR_MUSGO);
+                    C2D_DrawRectSolid(key.x, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO);
+                    C2D_DrawRectSolid(key.x + key.w - 1.5f, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO);
+                }
+
+                if (key.type == 6) { 
+                    float bx = key.x + (key.w/2.0f) - 8.0f; float by = key.y + 6.0f; float lh = 1.5f; 
+                    C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, COLOR_MUSGO);
+                    if (activeStyle.align == 0) { C2D_DrawRectSolid(bx, by, 0.4f, 16, lh, COLOR_BLANCO); C2D_DrawRectSolid(bx, by+4.0f, 0.4f, 10, lh, COLOR_BLANCO); C2D_DrawRectSolid(bx, by+8.0f, 0.4f, 14, lh, COLOR_BLANCO); }
+                    else if (activeStyle.align == 1) { C2D_DrawRectSolid(bx, by, 0.4f, 16, lh, COLOR_BLANCO); C2D_DrawRectSolid(bx+3.0f, by+4.0f, 0.4f, 10, lh, COLOR_BLANCO); C2D_DrawRectSolid(bx+1.0f, by+8.0f, 0.4f, 14, lh, COLOR_BLANCO); }
+                    else if (activeStyle.align == 2) { C2D_DrawRectSolid(bx, by, 0.4f, 16, lh, COLOR_BLANCO); C2D_DrawRectSolid(bx+6.0f, by+4.0f, 0.4f, 10, lh, COLOR_BLANCO); C2D_DrawRectSolid(bx+2.0f, by+8.0f, 0.4f, 14, lh, COLOR_BLANCO); }
+                    else { C2D_DrawRectSolid(bx, by, 0.4f, 16, lh, COLOR_BLANCO); C2D_DrawRectSolid(bx, by+4.0f, 0.4f, 16, lh, COLOR_BLANCO); C2D_DrawRectSolid(bx, by+8.0f, 0.4f, 16, lh, COLOR_BLANCO); }
+                } else {
+                    std::string mainChar = key.base; 
+                    float sX = (key.type >= 5) ? 0.48f : 0.56f;
+                    float txX = (key.type == 2) ? (key.w / 2.0f) - 34.0f : (key.w / 2.0f) - 6.0f; 
+                    if(key.type>=5) txX = (key.w/2.0f) - 12.0f;
+                    float txY = (key.type >= 5) ? 3.0f : 2.5f;
+                    
+                    bool isUpper = capsLock; if (key.base.size()==1 && key.base[0]>='a' && key.base[0]<='z') isUpper = (isUpper != isLHeld);
+                    
+                    if (isZLHeld && !key.ctrlAlt.empty()) { mainChar = key.ctrlAlt; txX = (key.w/2.0f) - 5.0f; }
+                    else if ((isLHeld || isUpper) && !key.shift.empty()) { mainChar = key.shift; txX = (key.w/2.0f) - 5.0f; }
+
+                    if (key.type == 5 && key.base == "K") {
+                        if (italicActive) mainChar = "ERR"; else mainChar = "K";
+                        txX = (key.w/2.0f) - (italicActive ? 12.0f : 6.0f);
+                    }
+                    if (key.type == 5 && key.base == "S") {
+                        if (isZLHeld) mainChar = "S/T"; else if (isLHeld) mainChar = "T"; else mainChar = "S";
+                        txX = (key.w/2.0f) - 9.0f;
+                    }
+                    if (key.type == 10) { 
+                        mainChar = isZLHeld ? "LINE" : (isLHeld ? "WORD" : "BACK");
+                        txX = (key.w / 2.0f) - (isZLHeld ? 18.0f : (isLHeld ? 20.0f : 18.0f));
+                        sX = 0.40f;
+                    }
+
+                    C2D_Text keyLabel; C2D_TextParse(&keyLabel, dynamicBuf, mainChar.c_str()); C2D_TextOptimize(&keyLabel);
+                    C2D_DrawText(&keyLabel, C2D_WithColor, key.x + txX, key.y + txY, 0.5f, sX, sX, cTexto);
+                }
+                
+                if (!isLHeld && !isZLHeld && !capsLock && (key.type == 0 || key.type == 4)) {
+                    if (!key.shift.empty() && key.shift != key.base) {
+                        C2D_Text sLbl; C2D_TextParse(&sLbl, dynamicBuf, key.shift.c_str()); C2D_TextOptimize(&sLbl);
+                        C2D_DrawText(&sLbl, C2D_WithColor, key.x + 2, key.y + 1, 0.5f, 0.22f, 0.22f, COLOR_ROJO); 
+                    }
+                    if (!key.ctrlAlt.empty()) {
+                        C2D_Text cLbl; C2D_TextParse(&cLbl, dynamicBuf, key.ctrlAlt.c_str()); C2D_TextOptimize(&cLbl);
+                        C2D_DrawText(&cLbl, C2D_WithColor, key.x + key.w - 11, key.y + 1, 0.5f, 0.22f, 0.22f, COLOR_MUSGO); 
+                    }
+                }
+            }
+        }
+
+        C3D_FrameEnd(0);
+    }
+    C2D_TextBufDelete(dynamicBuf);
+}
