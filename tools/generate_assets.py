@@ -9,12 +9,12 @@ def generate_assets():
     os.makedirs("romfs", exist_ok=True)
     os.makedirs("data", exist_ok=True)
 
-    # Generar icono por defecto de 48x48 si no existe
+    # Generar icono por defecto de 48x48 en formato RGBA válido para bannertool
     icon_path = "assets/icon.png"
     if not os.path.exists(icon_path):
         img = Image.new('RGBA', (48, 48), (78, 122, 101, 255))
         d = ImageDraw.Draw(img)
-        d.text((14, 10), "L", fill=(255, 255, 255, 255))
+        d.text((16, 12), "L", fill=(255, 255, 255, 255))
         img.save(icon_path)
 
     # Generar splash screen PNG
