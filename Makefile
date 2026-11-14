@@ -2,96 +2,72 @@
 .SUFFIXES:
 #---------------------------------------------------------------------------------
 
-ifeq ($(strip $(DEVKITPRO)),)
-export DEVKITPRO	:=	/opt/devkitpro
+ifeq ($(strip $(DEVKITARM)),)
+$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path>")
 endif
 
-export DEVKITARM	:=	$(DEVKITPRO)/devkitARM
-export DEVKITPPC	:=	$(DEVKITPRO)/devkitPPC
+include $(DEVKITARM)/3ds_rules
 
-#---------------------------------------------------------------------------------
-# Target configuration
-#---------------------------------------------------------------------------------
 TARGET		:=	Laura
 BUILD		:=	build
 SOURCES		:=	source
-DATA		:=	data
 INCLUDES	:=	include
+DATA		:=	data
 ROMFS		:=	romfs
 
-#---------------------------------------------------------------------------------
-# Libraries and flags
-#---------------------------------------------------------------------------------
-ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mfpu=vfp
+PORTLIBS	:=	$(DEVKITPRO)/portlibs/3ds
 
-CFLAGS		:=	-g -Wall -O2 -mword-relocations \
-				-ffunction-sections \
-				$(ARCH) \
-				-D_3DS
+ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard
+
+CFLAGS		:=	-Wall -O2 -ffunction-sections \
+			$(ARCH) -D__3DS__ \
+			-I$(DEVKITPRO)/libctru/include \
+			-I$(PORTLIBS)/include \
+			$(foreach dir,$(INCLUDES),-I$(dir))
 
 CXXFLAGS	:=	$(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 
-ASFLAGS		:=	-g $(ARCH)
-LDFLAGS		:=	-specs=3dsx.specs -g $(ARCH) -Wl,--start-group -lcitro2d -lcitro3d -lctru -lm -Wl,--end-group
+ASFLAGS		:=	$(ARCH)
+LDFLAGS		:=	-specs=3dsx.specs $(ARCH) \
+			-L$(DEVKITPRO)/libctru/lib \
+			-L$(PORTLIBS)/lib
 
-#---------------------------------------------------------------------------------
-# Tools
-#---------------------------------------------------------------------------------
-PREFIX		:=	arm-none-eabi-
-CC			:=	$(PREFIX)gcc
-CXX			:=	$(PREFIX)g++
-AS			:=	$(PREFIX)as
-AR			:=	$(PREFIX)ar
-LD			:=	$(PREFIX)g++
-OBJCOPY		:=	$(PREFIX)objcopy
-STRIP		:=	$(PREFIX)strip
-ROMFSGEN	:=	romfs-gen
-3DSX		:=	3dsx
-SMDH		:=	smdh
+LIBS		:=	-lcitro2d -lcitro3d -lctru -lm
 
-#---------------------------------------------------------------------------------
-# Rules
-#---------------------------------------------------------------------------------
-ifeq ($(strip $(BUILD)),$(notdir $(CURDIR)))
-export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
-					$(foreach dir,$(DATA),$(CURDIR)/$(dir))
+CFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))
+CPPFILES	:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.cpp))
+SFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.s))
 
-CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+OBJS		:=	$(addprefix $(BUILD)/,$(CFILES:.c=.o) $(CPPFILES:.cpp=.o) $(SFILES:.s=.o))
 
-OFILES		:=	$(addsuffix .o,$(basename $(CFILES))) \
-				$(addsuffix .o,$(basename $(CPPFILES))) \
-				$(addsuffix .o,$(basename $(SFILES)))
+all: $(TARGET).3dsx $(TARGET).cia
 
-export DEPSDIR	:=	$(CURDIR)
+$(TARGET).3dsx: $(BUILD)/$(TARGET).elf
+	@echo builtin 3dsx...
+	3dsxtool $< $@
+	@smdhtool --create "Laura Word Processor" "Editor de texto minimalista" "Laura" $(TARGET).smdh || true
+	@bannertool makesmdh -s "Laura Word Processor" -l "Laura" -p "Autor" -i assets/icon.png -o $(TARGET).smdh || true
 
-CDEPS		:=	$(addsuffix .d,$(basename $(CFILES)))
-CPPDEPS		:=	$(addsuffix .d,$(basename $(CPPFILES)))
+$(TARGET).cia: $(TARGET).3dsx
+	@echo builtin cia...
+	cp $(TARGET).3dsx $(TARGET).cia || true
 
-ifneq ($(wildcard $(DEVKITPRO)/libctru/switch_rules),)
-include $(DEVKITPRO)/libctru/switch_rules
-else
-$(error "Please install devkitPro and libctru (switch_rules not found at $(DEVKITPRO)/libctru/switch_rules)")
-endif
+$(BUILD)/$(TARGET).elf: $(OBJS)
+	@echo linking ...
+	$(CXX) $(LDFLAGS) $(OBJS) $(LIBS) -o $@
 
-output: $(TARGET).3dsx
+$(BUILD)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	@echo "Compilando C++ $<..."
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(TARGET).3dsx: $(TARGET).elf
-
-else
-
-export TARGET	:=	$(shell basename $(CURDIR))
-export BUILD	:=	$(CURDIR)/build
-
-all:
-	@[ -d $(BUILD) ] || mkdir -p $(BUILD)
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+$(BUILD)/%.o: %.c
+	@mkdir -p $(dir $@)
+	@echo "Compilando C $<..."
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(TARGET).cia $(TARGET).bnr
 
-endif
-
-#---------------------------------------------------------------------------------
+.PHONY: all clean
