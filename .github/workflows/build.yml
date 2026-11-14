@@ -21,7 +21,7 @@ jobs:
           dkp-pacman -S --noconfirm dkp-pacman devkitpro-keyring || true
           dkp-pacman -Syu --noconfirm || true
           dkp-pacman -S --noconfirm citro2d citro3d libctru 3dstools
-          pacman -S --noconfirm python || true
+          pacman -S --noconfirm python python-pillow || true
 
       - name: Build Laura 3DS
         run: |
