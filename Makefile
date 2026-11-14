@@ -2,97 +2,92 @@
 .SUFFIXES:
 #---------------------------------------------------------------------------------
 
-ifeq ($(strip $(DEVKITARM)),)
-$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path>")
+ifeq ($(strip $(DEVKITPRO)),)
+export DEVKITPRO	:=	/opt/devkitpro
 endif
 
-include $(DEVKITARM)/3ds_rules
+export DEVKITARM	:=	$(DEVKITPRO)/devkitARM
+export DEVKITPPC	:=	$(DEVKITPRO)/devkitPPC
 
+#---------------------------------------------------------------------------------
+# Target configuration
+#---------------------------------------------------------------------------------
 TARGET		:=	Laura
 BUILD		:=	build
 SOURCES		:=	source
-INCLUDES	:=	include
 DATA		:=	data
+INCLUDES	:=	include
 ROMFS		:=	romfs
 
-APP_TITLE	:=	Laura
-APP_DESCRIPTION	:=	Procesador de Texto Minimalista para Nintendo 3DS
-APP_AUTHOR	:=	Laura Dev
+#---------------------------------------------------------------------------------
+# Libraries and flags
+#---------------------------------------------------------------------------------
+ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mfpu=vfp
 
-PORTLIBS	:=	$(DEVKITPRO)/portlibs/3ds
-LIBCTRU		:=	$(DEVKITPRO)/libctru
-
-ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
-
-CFLAGS		:=	-Wall -O2 -mword-relocations \
-			-fomit-frame-pointer -ffunction-sections \
-			$(ARCH) -D__3DS__ \
-			-I$(LIBCTRU)/include \
-			-I$(PORTLIBS)/include \
-			$(foreach dir,$(INCLUDES),-I$(dir))
+CFLAGS		:=	-g -Wall -O2 -mword-relocations \
+				-ffunction-sections \
+				$(ARCH) \
+				-D_3DS
 
 CXXFLAGS	:=	$(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 
 ASFLAGS		:=	-g $(ARCH)
-LDFLAGS		:=	-specs=3dsx.specs -g $(ARCH) \
-			-L$(LIBCTRU)/lib \
-			-L$(PORTLIBS)/lib
+LDFLAGS		:=	-specs=3dsx.specs -g $(ARCH) -Wl,--start-group -lcitro2d -lcitro3d -lctru -lm -Wl,--end-group
 
-LIBS		:=	-lcitro2d -lcitro3d -lctru -lm
+#---------------------------------------------------------------------------------
+# Tools
+#---------------------------------------------------------------------------------
+PREFIX		:=	arm-none-eabi-
+CC			:=	$(PREFIX)gcc
+CXX			:=	$(PREFIX)g++
+AS			:=	$(PREFIX)as
+AR			:=	$(PREFIX)ar
+LD			:=	$(PREFIX)g++
+OBJCOPY		:=	$(PREFIX)objcopy
+STRIP		:=	$(PREFIX)strip
+ROMFSGEN	:=	romfs-gen
+3DSX		:=	3dsx
+SMDH		:=	smdh
 
-CFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))
-CPPFILES	:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.cpp))
-SFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.s))
+#---------------------------------------------------------------------------------
+# Rules
+#---------------------------------------------------------------------------------
+ifeq ($(strip $(BUILD)),$(notdir $(CURDIR)))
+export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+					$(foreach dir,$(DATA),$(CURDIR)/$(dir))
 
-OBJS		:=	$(addprefix $(BUILD)/,$(CFILES:.c=.o) $(CPPFILES:.cpp=.o) $(SFILES:.s=.o))
+CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 
-# Detectar automáticamente si existe icon.png o Laura.png en la raíz
-ICON_FILE	:=	$(firstword $(wildcard $(TARGET).png icon.png))
+OFILES		:=	$(addsuffix .o,$(basename $(CFILES))) \
+				$(addsuffix .o,$(basename $(CPPFILES))) \
+				$(addsuffix .o,$(basename $(SFILES)))
 
-# Incluir romfs si la carpeta existe y no está vacía
-ROMFS_FLAG	:=	$(if $(wildcard $(ROMFS)/*),--romfs=$(ROMFS),)
+export DEPSDIR	:=	$(CURDIR)
 
-.PHONY: all clean
+CDEPS		:=	$(addsuffix .d,$(basename $(CFILES)))
+CPPDEPS		:=	$(addsuffix .d,$(basename $(CPPFILES)))
 
-all: $(TARGET).3dsx
+include $(DEVKITPRO)/libctru/switch_rules
 
-# 1. Crear primero el archivo SMDH (con ícono si existe, o con ícono por defecto si no)
-$(TARGET).smdh:
-	@echo "Creando $(TARGET).smdh..."
-ifneq ($(strip $(ICON_FILE)),)
-	@smdhtool --create "$(APP_TITLE)" "$(APP_DESCRIPTION)" "$(APP_AUTHOR)" "$(ICON_FILE)" $@ || \
-	 smdhtool --create "$(APP_TITLE)" "$(APP_DESCRIPTION)" "$(APP_AUTHOR)" $@
+output: $(TARGET).3dsx
+
+$(TARGET).3dsx: $(TARGET).elf
+
 else
-	@smdhtool --create "$(APP_TITLE)" "$(APP_DESCRIPTION)" "$(APP_AUTHOR)" $@
-endif
 
-# 2. Enlazar el ejecutable ELF
-$(BUILD)/$(TARGET).elf: $(OBJS)
-	@mkdir -p $(dir $@)
-	@echo "Enlazando $(TARGET).elf..."
-	@$(CXX) $(LDFLAGS) $(OBJS) $(LIBS) -o $@
+export TARGET	:=	$(shell basename $(CURDIR))
+export BUILD	:=	$(CURDIR)/build
 
-# 3. Empaquetar el .3dsx usando el .elf y el .smdh ya creados
-$(TARGET).3dsx: $(BUILD)/$(TARGET).elf $(TARGET).smdh
-	@echo "Generando $(TARGET).3dsx..."
-	@3dsxtool $< $@ --smdh=$(TARGET).smdh $(ROMFS_FLAG)
-
-# Compilación de archivos objeto
-$(BUILD)/%.o: %.cpp
-	@mkdir -p $(dir $@)
-	@echo "Compilando C++ $<..."
-	@$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD)/%.o: %.c
-	@mkdir -p $(dir $@)
-	@echo "Compilando C $<..."
-	@$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD)/%.o: %.s
-	@mkdir -p $(dir $@)
-	@echo "Ensamblando $<..."
-	@$(CC) $(ASFLAGS) -c $< -o $@
+all:
+	@[ -d $(BUILD) ] || mkdir -p $(BUILD)
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
-	@echo "Limpiando archivos de compilación..."
-	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).smdh $(TARGET).elf $(TARGET).cia
+	@echo clean ...
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh
+
+endif
+
+#---------------------------------------------------------------------------------
