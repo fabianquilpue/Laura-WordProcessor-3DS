@@ -9,20 +9,63 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup devkitPro
-        uses: devkitPro/actions/setup-devkitpro@v1
-        with:
-          packages: 3ds-dev citro2d citro3d
-
-      - name: Build Laura 3DS
+      - name: Setup Dependencies and Build
         run: |
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
+          
+          # Crear directorios necesarios
+          mkdir -p /opt/devkitpro/portlibs/3ds/include /opt/devkitpro/portlibs/3ds/lib
+          mkdir -p /opt/devkitpro/libctru/include /opt/devkitpro/libctru/lib
+          
+          # Descargar e instalar libctru y switch_rules
+          echo "Descargando libctru..."
+          curl -sL https://github.com/devkitPro/libctru/archive/refs/heads/master.tar.gz | tar -xz
+          EXTRACTED_LIBCTRUD=$(find . -maxdepth 1 -type d -name "libctru-*")
+          if [ -d "$EXTRACTED_LIBCTRUD/include" ]; then
+            cp -r $EXTRACTED_LIBCTRUD/include/* /opt/devkitpro/libctru/include/
+          fi
+          if [ -d "$EXTRACTED_LIBCTRUD/lib" ]; then
+            cp -r $EXTRACTED_LIBCTRUD/lib/* /opt/devkitpro/libctru/lib/ || true
+          fi
+          if [ -f "$EXTRACTED_LIBCTRUD/switch_rules" ]; then
+            cp "$EXTRACTED_LIBCTRUD/switch_rules" /opt/devkitpro/libctru/
+          fi
+          rm -rf libctru-*
+
+          # Descargar citro2d
+          echo "Descargando citro2d..."
+          curl -sL https://github.com/devkitPro/citro2d/archive/refs/heads/master.tar.gz | tar -xz
+          EXTRACTED_CITRO2D=$(find . -maxdepth 1 -type d -name "citro2d-*")
+          if [ -d "$EXTRACTED_CITRO2D/include" ]; then
+            cp -r $EXTRACTED_CITRO2D/include/* /opt/devkitpro/portlibs/3ds/include/
+          fi
+          if [ -d "$EXTRACTED_CITRO2D/lib" ]; then
+            cp -r $EXTRACTED_CITRO2D/lib/* /opt/devkitpro/portlibs/3ds/lib/ || true
+          fi
+          rm -rf citro2d-*
+
+          # Descargar citro3d
+          echo "Descargando citro3d..."
+          curl -sL https://github.com/devkitPro/citro3d/archive/refs/heads/master.tar.gz | tar -xz
+          EXTRACTED_CITRO3D=$(find . -maxdepth 1 -type d -name "citro3d-*")
+          if [ -d "$EXTRACTED_CITRO3D/include" ]; then
+            cp -r $EXTRACTED_CITRO3D/include/* /opt/devkitpro/portlibs/3ds/include/
+          fi
+          if [ -d "$EXTRACTED_CITRO3D/lib" ]; then
+            cp -r $EXTRACTED_CITRO3D/lib/* /opt/devkitpro/portlibs/3ds/lib/ || true
+          fi
+          rm -rf citro3d-*
+
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=$DEVKITPRO/devkitARM
           make
 
       - name: Upload Build Artifacts
