@@ -43,11 +43,11 @@ OBJS		:=	$(addprefix $(BUILD)/,$(CFILES:.c=.o) $(CPPFILES:.cpp=.o) $(SFILES:.s=.
 all: $(TARGET).smdh $(TARGET).3dsx
 
 $(TARGET).smdh: assets/icon.png
-	@echo builtin smdh...
-	bannertool makesmdh -s "Laura Word Processor" -l "Laura" -p "Laura Dev" -i assets/icon.png -o $@
+	@echo Generando smdh con smdhtool...
+	smdhtool --create "Laura Word Processor" "Laura" "Laura Dev" assets/icon.png $@
 
 $(TARGET).3dsx: $(BUILD)/$(TARGET).elf $(TARGET).smdh
-	@echo builtin 3dsx with embedded smdh...
+	@echo Generando 3dsx con smdh incrustado...
 	3dsxtool $< $@ --smdh=$(TARGET).smdh
 
 $(BUILD)/$(TARGET).elf: $(OBJS)
