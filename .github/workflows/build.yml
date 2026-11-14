@@ -20,8 +20,8 @@ jobs:
         run: |
           dkp-pacman -S --noconfirm dkp-pacman devkitpro-keyring || true
           dkp-pacman -Syu --noconfirm || true
-          dkp-pacman -S --noconfirm citro2d citro3d libctru 3dstools python-pillow python-pip || true
-          python3 -m pip install --upgrade pip Pillow || true
+          dkp-pacman -S --noconfirm citro2d citro3d libctru 3dstools python-pillow || true
+          pacman -S --noconfirm python-pillow || true
 
       - name: Build Laura 3DS
         run: |
