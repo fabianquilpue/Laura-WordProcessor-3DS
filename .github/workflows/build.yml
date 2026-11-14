@@ -1,4 +1,3 @@
-
 name: Build Laura - Word Processor 3DS
 
 on:
@@ -20,7 +19,7 @@ jobs:
       - name: Build Laura 3DS
         run: |
           export DEVKITPRO=/opt/devkitpro
-          export DEVKITARM=/opt/devkitpro/devkitARM
+          export DEVKITARM=$DEVKITPRO/devkitARM
           
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
@@ -32,4 +31,5 @@ jobs:
           name: Laura-WordProcessor-3DS
           path: |
             Laura.3dsx
+            Laura.cia
             Laura.smdh
