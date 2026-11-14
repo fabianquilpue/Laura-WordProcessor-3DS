@@ -18,10 +18,12 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          dkp-pacman -S --noconfirm dkp-pacman devkitpro-keyring || true
-          dkp-pacman -Syu --noconfirm || true
-          dkp-pacman -S --noconfirm citro2d citro3d libctru 3dstools python-pillow || true
-          pacman -S --noconfirm python-pillow || true
+          # Instalar Python y Pillow mediante el gestor del sistema (pacman)
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm python python-pillow python-pip
+          
+          # Instalar librerías de desarrollo para la 3DS mediante dkp-pacman
+          dkp-pacman -S --noconfirm citro2d citro3d libctru 3dstools || true
 
       - name: Build Laura 3DS
         run: |
