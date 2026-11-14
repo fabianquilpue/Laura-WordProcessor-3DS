@@ -9,25 +9,18 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: devkitpro/devkitarm:latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        run: |
-          dkp-pacman -S --noconfirm dkp-pacman devkitpro-keyring || true
-          dkp-pacman -Syu --noconfirm || true
-          dkp-pacman -S --noconfirm citro2d citro3d libctru 3dstools
-          pacman -S --noconfirm python || true
+      - name: Setup devkitPro
+        uses: devkitPro/actions/setup-devkitpro@v1
+        with:
+          packages: 3ds-dev citro2d citro3d
 
       - name: Build Laura 3DS
         run: |
-          export DEVKITPRO=/opt/devkitpro
-          export DEVKITARM=$DEVKITPRO/devkitARM
-          
           mkdir -p assets/fonts data
           python3 tools/generate_assets.py
           make
