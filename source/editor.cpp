@@ -125,23 +125,38 @@ bool guardarEnRTF(const std::vector<StyledChar>& doc, std::string& fileName, std
 }
 
 std::string aplicarTeclaMuerta(char vocal, int tipoMuerta) {
-    bool isUpper = (vocal >= 'A' && vocal <= 'Z'); char vL = isUpper ? (vocal + 32) : vocal;
+    bool isUpper = (vocal >= 'A' && vocal <= 'Z'); 
+    char vL = isUpper ? (vocal + 32) : vocal;
     if (tipoMuerta == 1) {
-        if (vL=='a') return isUpper?"Á":"á"; if (vL=='e') return isUpper?"É":"é"; if (vL=='i') return isUpper?"Í":"í";
-        if (vL=='o') return isUpper?"Ó":"ó"; if (vL=='u') return isUpper?"Ú":"ú";
+        if (vL=='a') return isUpper?"Á":"á"; 
+        if (vL=='e') return isUpper?"É":"é"; 
+        if (vL=='i') return isUpper?"Í":"í";
+        if (vL=='o') return isUpper?"Ó":"ó"; 
+        if (vL=='u') return isUpper?"Ú":"ú";
     } else if (tipoMuerta == 2) {
-        if (vL=='a') return isUpper?"Ä":"ä"; if (vL=='e') return isUpper?"Ë":"ë"; if (vL=='i') return isUpper?"Ï":"ï";
-        if (vL=='o') return isUpper?"Ö":"ö"; if (vL=='u') return isUpper?"Ü":"ü";
+        if (vL=='a') return isUpper?"Ä":"ä"; 
+        if (vL=='e') return isUpper?"Ë":"ë"; 
+        if (vL=='i') return isUpper?"Ï":"ï";
+        if (vL=='o') return isUpper?"Ö":"ö"; 
+        if (vL=='u') return isUpper?"Ü":"ü";
     } else if (tipoMuerta == 3) {
-        if (vL=='a') return isUpper?"À":"à"; if (vL=='e') return isUpper?"È":"è"; if (vL=='i') return isUpper?"Ì":"ì";
-        if (vL=='o') return isUpper?"Ò":"ò"; if (vL=='u') return isUpper?"Ù":"ù";
+        if (vL=='a') return isUpper?"À":"à"; 
+        if (vL=='e') return isUpper?"È":"è"; 
+        if (vL=='i') return isUpper?"Ì":"ì";
+        if (vL=='o') return isUpper?"Ò":"ò"; 
+        if (vL=='u') return isUpper?"Ù":"ù";
     } else if (tipoMuerta == 4) {
-        if (vL=='a') return isUpper?"Â":"â"; if (vL=='e') return isUpper?"Ê":"ê"; if (vL=='i') return isUpper?"Î":"î";
-        if (vL=='o') return isUpper?"Ô":"ô"; if (vL=='u') return isUpper?"Û":"û";
+        if (vL=='a') return isUpper?"Â":"â"; 
+        if (vL=='e') return isUpper?"Ê":"ê"; 
+        if (vL=='i') return isUpper?"Î":"î";
+        if (vL=='o') return isUpper?"Ô":"ô"; 
+        if (vL=='u') return isUpper?"Û":"û";
     } else if (tipoMuerta == 5) {
         if (vL=='n') return isUpper?"Ñ":"ñ";
     }
-    std::string res = (tipoMuerta == 1 ? "´" : (tipoMuerta == 2 ? "¨" : (tipoMuerta == 3 ? "`" : (tipoMuerta == 4 ? "^" : "~")))); res += vocal; return res;
+    std::string res = (tipoMuerta == 1 ? "´" : (tipoMuerta == 2 ? "¨" : (tipoMuerta == 3 ? "`" : (tipoMuerta == 4 ? "^" : "~")))); 
+    res += vocal; 
+    return res;
 }
 
 void runEditorLoop() {
@@ -250,7 +265,7 @@ void runEditorLoop() {
     keys.push_back({268.0f, row0, 48.0f, 22.0f, "BACK", "BACK", "BACK", 10}); 
 
     std::string r1_b[10] = {"1","2","3","4","5","6","7","8","9","0"}; 
-    std::string r1_s[10] = {"*","\"","·","$","%","&","/","<",","="}; 
+    std::string r1_s[10] = {"*","\"","·","$","%","&","/","<",",","="}; 
     std::string r1_c[10] = {"|","@","#","ª","+","¬","\\","^","]","º"};
     for (int i = 0; i < 10; i++) keys.push_back({8.0f + i * (btnW + gap), row1, btnW, 23.0f, r1_b[i], r1_s[i], r1_c[i], 0}); 
     
@@ -290,10 +305,10 @@ void runEditorLoop() {
     bool flagSalir = false;
     std::vector<std::string> fileList; int fileScroll = 0;
     
-    int startMenuSel = 0; // Inicializado en 0 ("GUARDAR")
+    int startMenuSel = 0;
     int formatMenuRow = 0, formatMenuCol = 0; 
     int openMenuSel = -1;
-    int confirmSel = 1; // Inicializado en 1 ("NO")
+    int confirmSel = 1;
     int manualMenuSel = -1;
 
     const int INITIAL_DELAY = 15; const int REPEAT_RATE = 4;
@@ -557,7 +572,6 @@ void runEditorLoop() {
             if (touchJustPressed) {
                 if (menuAbierto == 1) { 
                     if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) menuAbierto = 0; 
-                    // Tamaño e interlineado lado a lado compactos
                     if (touch.px >= 15 && touch.px <= 45 && touch.py >= 70 && touch.py <= 98) { activeStyle.fontSize = std::max(12, activeStyle.fontSize - 2); formatMenuRow = 0; formatMenuCol = 0; }
                     if (touch.px >= 95 && touch.px <= 125 && touch.py >= 70 && touch.py <= 98) { activeStyle.fontSize = std::min(72, activeStyle.fontSize + 2); formatMenuRow = 0; formatMenuCol = 1; }
                     
@@ -893,7 +907,6 @@ void runEditorLoop() {
             C2D_Text lblSz; C2D_TextParse(&lblSz, dynamicBuf, "Tamaño"); C2D_TextOptimize(&lblSz);
             C2D_DrawText(&lblSz, C2D_WithColor, 15, 48, 0.6f, 0.38f, 0.38f, COLOR_NEGRO);
 
-            // Tamaño e interlineado compactos lado a lado
             C2D_DrawRectSolid(15, 70, 0.6f, 30, 28, COLOR_BLANCO);
             C2D_DrawRectSolid(15, 70, 0.65f, 30, 2.5f, COLOR_NEGRO); C2D_DrawRectSolid(15, 95.5f, 0.65f, 30, 2.5f, COLOR_NEGRO);
             C2D_DrawRectSolid(15, 70, 0.65f, 2.5f, 28, COLOR_NEGRO); C2D_DrawRectSolid(42.5f, 70, 0.65f, 2.5f, 28, COLOR_NEGRO);
@@ -1082,7 +1095,6 @@ void runEditorLoop() {
                     cFondo = COLOR_MUSGO; cTexto = COLOR_BLANCO;
                 }
 
-                // Marco gris más oscuro alrededor de cada tecla
                 C2D_DrawRectSolid(key.x - 1.0f, key.y - 1.0f, 0.25f, key.w + 2.0f, key.h + 2.0f, C2D_Color32(170, 175, 185, 255));
                 C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, cFondo);
 
@@ -1097,11 +1109,11 @@ void runEditorLoop() {
                 }
 
                 if (key.type == 6) { 
-                    float bx = key.x + (key.w/2.0f) - 8.0f; float by = key.y + 6.0f; u32 ic = COLOR_MUSGO; float lh = 1.5f; // Botón de interlineado SIEMPRE en verde musgo
+                    float bx = key.x + (key.w/2.0f) - 8.0f; float by = key.y + 6.0f; float lh = 1.5f; 
                     C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, COLOR_MUSGO);
                     C2D_DrawRectSolid(bx, by, 0.4f, 16, lh, COLOR_BLANCO); C2D_DrawRectSolid(bx, by+4.0f, 0.4f, 10, lh, COLOR_BLANCO); C2D_DrawRectSolid(bx, by+8.0f, 0.4f, 14, lh, COLOR_BLANCO);
                 } else {
-                    std::string mainChar = key.base; float sX = (key.type >= 5) ? 0.42f : 0.45f; // Tipografía más grande para teclas de letras y puntuación
+                    std::string mainChar = key.base; float sX = (key.type >= 5) ? 0.42f : 0.45f;
                     float txX = (key.type == 2) ? (key.w / 2.0f) - 30.0f : (key.w / 2.0f) - 5.0f; 
                     if(key.type>=5) txX = (key.w/2.0f) - 10.0f;
                     float txY = (key.type >= 5) ? 3.5f : 5.0f;
@@ -1122,7 +1134,6 @@ void runEditorLoop() {
                         sX = 0.35f;
                     }
                     
-                    // Centrado perfecto de letras
                     if (key.base.size() == 1 && key.base[0] >= 'a' && key.base[0] <= 'z') {
                         txX = (key.w / 2.0f) - 5.5f;
                     }
@@ -1130,7 +1141,6 @@ void runEditorLoop() {
                     C2D_Text keyLabel; C2D_TextParse(&keyLabel, dynamicBuf, mainChar.c_str()); C2D_TextOptimize(&keyLabel);
                     C2D_DrawText(&keyLabel, C2D_WithColor, key.x + txX, key.y + txY, 0.5f, sX, sX, cTexto);
                     
-                    // Si Negrita está activa, dibujar sombra desplazada para simular negrita en el teclado
                     if (boldActive && key.type != 10 && key.base != "ALIN" && key.base != "Aa") {
                         C2D_DrawText(&keyLabel, C2D_WithColor, key.x + txX + 0.8f, key.y + txY, 0.51f, sX, sX, cTexto);
                     }
@@ -1153,4 +1163,3 @@ void runEditorLoop() {
     }
     C2D_TextBufDelete(dynamicBuf);
 }
-```[file-tag: code-generated-file-3cdd4d0d-2815-462e-abea-04becb093381]
