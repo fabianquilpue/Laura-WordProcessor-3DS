@@ -250,18 +250,18 @@ void runEditorLoop() {
         C2D_TextBufClear(dynamicBuf);
     }
 
-    // --- TECLADO Y DISEÑO ---
+    // --- TECLADO Y DISEÑO (Fila 0 optimizada con mayor altura para facilitar el toque) ---
     std::vector<KeyButton> keys; 
     float btnW = 29.5f, btnH = 31.0f, gap = 2.0f;
-    float row0 = 4.0f, row1 = 30.0f, row2 = 64.0f, row3 = 98.0f, row4 = 132.0f, row5 = 166.0f, row6 = 202.0f;
+    float row0 = 2.0f, row1 = 30.0f, row2 = 64.0f, row3 = 98.0f, row4 = 132.0f, row5 = 166.0f, row6 = 202.0f;
 
-    keys.push_back({4.0f, row0, 42.0f, 22.0f, "N", "N", "N", 5});
-    keys.push_back({48.0f, row0, 42.0f, 22.0f, "K", "K", "K", 5}); 
-    keys.push_back({92.0f, row0, 42.0f, 22.0f, "S", "S", "S", 5});
-    keys.push_back({136.0f, row0, 42.0f, 22.0f, "ALIN", "ALIN", "ALIN", 6}); 
-    keys.push_back({180.0f, row0, 42.0f, 22.0f, "Aa", "Aa", "Aa", 7}); 
-    keys.push_back({224.0f, row0, 42.0f, 22.0f, "¶", "¶", "¶", 9}); 
-    keys.push_back({268.0f, row0, 48.0f, 22.0f, "BACK", "BACK", "BACK", 10}); 
+    keys.push_back({4.0f, row0, 42.0f, 26.0f, "N", "N", "N", 5});
+    keys.push_back({48.0f, row0, 42.0f, 26.0f, "K", "K", "K", 5}); 
+    keys.push_back({92.0f, row0, 42.0f, 26.0f, "S", "S", "S", 5});
+    keys.push_back({136.0f, row0, 42.0f, 26.0f, "ALIN", "ALIN", "ALIN", 6}); 
+    keys.push_back({180.0f, row0, 42.0f, 26.0f, "Aa", "Aa", "Aa", 7}); 
+    keys.push_back({224.0f, row0, 42.0f, 26.0f, "¶", "¶", "¶", 9}); 
+    keys.push_back({268.0f, row0, 48.0f, 26.0f, "BACK", "BACK", "BACK", 10}); 
 
     std::string r1_b[10] = {"1","2","3","4","5","6","7","8","9","0"}; 
     std::string r1_s[10] = {"*","\"","·","$","%","&","/","<",",","="}; 
@@ -632,7 +632,7 @@ void runEditorLoop() {
                 }
             }
         } else {
-            // Teclado principal con TOQUE ÚNICO (Single Tap instantáneo)
+            // Teclado principal con TOQUE ÚNICO (Single Tap instantáneo para todas las teclas)
             if (touchJustPressed) {
                 if (touchedIdx != -1) {
                     activeTouchKeyIdx = touchedIdx;
@@ -1054,7 +1054,7 @@ void runEditorLoop() {
                     C2D_DrawRectSolid(key.x, key.y, 0.35f, key.w, 1.5f, COLOR_MUSGO);
                     C2D_DrawRectSolid(key.x, key.y + key.h - 1.5f, 0.35f, key.w, 1.5f, COLOR_MUSGO);
                     C2D_DrawRectSolid(key.x, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO);
-                    C2D_DrawRectSolid(key.x + key.w - 1.5f, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO);
+                    C2D_DrawRectSolid(key.x + key.w - 1.5f, key.y, 0.35f, 1.5f, COLOR_MUSGO);
                 }
 
                 if (key.type == 6) { 
