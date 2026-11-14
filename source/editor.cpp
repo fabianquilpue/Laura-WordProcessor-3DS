@@ -1156,7 +1156,7 @@ void runEditorLoop() {
                     C2D_DrawText(&keyLabel, C2D_WithColor, key.x + txX, key.y + txY, 0.5f, sX, sX, cTexto);
                     
                     if (boldActive && key.type != 10 && key.base != "ALIN" && key.base != "Aa") {
-                        C2D_Test(&keyLabel, C2D_WithColor, key.x + txX + 0.8f, key.y + txY, 0.51f, sX, sX, cTexto);
+                        C2D_DrawText(&keyLabel, C2D_WithColor, key.x + txX + 0.8f, key.y + txY, 0.51f, sX, sX, cTexto);
                     }
                 }
                 
