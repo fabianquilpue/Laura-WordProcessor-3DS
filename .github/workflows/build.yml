@@ -16,56 +16,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Dependencies and Build
+      - name: Install Dependencies
         run: |
-          mkdir -p assets/fonts data
-          python3 tools/generate_assets.py
-          
-          # Crear directorios necesarios
-          mkdir -p /opt/devkitpro/portlibs/3ds/include /opt/devkitpro/portlibs/3ds/lib
-          mkdir -p /opt/devkitpro/libctru/include /opt/devkitpro/libctru/lib
-          
-          # Descargar e instalar libctru y switch_rules
-          echo "Descargando libctru..."
-          curl -sL https://github.com/devkitPro/libctru/archive/refs/heads/master.tar.gz | tar -xz
-          EXTRACTED_LIBCTRUD=$(find . -maxdepth 1 -type d -name "libctru-*")
-          if [ -d "$EXTRACTED_LIBCTRUD/include" ]; then
-            cp -r $EXTRACTED_LIBCTRUD/include/* /opt/devkitpro/libctru/include/
-          fi
-          if [ -d "$EXTRACTED_LIBCTRUD/lib" ]; then
-            cp -r $EXTRACTED_LIBCTRUD/lib/* /opt/devkitpro/libctru/lib/ || true
-          fi
-          if [ -f "$EXTRACTED_LIBCTRUD/switch_rules" ]; then
-            cp "$EXTRACTED_LIBCTRUD/switch_rules" /opt/devkitpro/libctru/
-          fi
-          rm -rf libctru-*
+          dkp-pacman -S --noconfirm dkp-pacman devkitpro-keyring || true
+          dkp-pacman -Syu --noconfirm || true
+          dkp-pacman -S --noconfirm citro2d citro3d libctru 3dstools
+          pacman -S --noconfirm python || true
 
-          # Descargar citro2d
-          echo "Descargando citro2d..."
-          curl -sL https://github.com/devkitPro/citro2d/archive/refs/heads/master.tar.gz | tar -xz
-          EXTRACTED_CITRO2D=$(find . -maxdepth 1 -type d -name "citro2d-*")
-          if [ -d "$EXTRACTED_CITRO2D/include" ]; then
-            cp -r $EXTRACTED_CITRO2D/include/* /opt/devkitpro/portlibs/3ds/include/
-          fi
-          if [ -d "$EXTRACTED_CITRO2D/lib" ]; then
-            cp -r $EXTRACTED_CITRO2D/lib/* /opt/devkitpro/portlibs/3ds/lib/ || true
-          fi
-          rm -rf citro2d-*
-
-          # Descargar citro3d
-          echo "Descargando citro3d..."
-          curl -sL https://github.com/devkitPro/citro3d/archive/refs/heads/master.tar.gz | tar -xz
-          EXTRACTED_CITRO3D=$(find . -maxdepth 1 -type d -name "citro3d-*")
-          if [ -d "$EXTRACTED_CITRO3D/include" ]; then
-            cp -r $EXTRACTED_CITRO3D/include/* /opt/devkitpro/portlibs/3ds/include/
-          fi
-          if [ -d "$EXTRACTED_CITRO3D/lib" ]; then
-            cp -r $EXTRACTED_CITRO3D/lib/* /opt/devkitpro/portlibs/3ds/lib/ || true
-          fi
-          rm -rf citro3d-*
-
+      - name: Build Laura 3DS
+        run: |
           export DEVKITPRO=/opt/devkitpro
           export DEVKITARM=$DEVKITPRO/devkitARM
+          
+          mkdir -p assets/fonts data
+          python3 tools/generate_assets.py
           make
 
       - name: Upload Build Artifacts
