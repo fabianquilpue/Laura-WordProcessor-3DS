@@ -250,7 +250,7 @@ void runEditorLoop() {
         C2D_TextBufClear(dynamicBuf);
     }
 
-    // --- TECLADO Y DISEÑO ---
+    // --- TECLADO Y DISEÑO (Fila 0 con ¶ usando tipo 5 igual que K, N, S) ---
     std::vector<KeyButton> keys; 
     float btnW = 29.5f, btnH = 31.0f, gap = 2.0f;
     float row0 = 2.0f, row1 = 30.0f, row2 = 64.0f, row3 = 98.0f, row4 = 132.0f, row5 = 166.0f, row6 = 202.0f;
@@ -260,7 +260,7 @@ void runEditorLoop() {
     keys.push_back({92.0f, row0, 42.0f, 26.0f, "S", "S", "S", 5});
     keys.push_back({136.0f, row0, 42.0f, 26.0f, "ALIN", "ALIN", "ALIN", 6}); 
     keys.push_back({180.0f, row0, 42.0f, 26.0f, "Aa", "Aa", "Aa", 7}); 
-    keys.push_back({224.0f, row0, 42.0f, 26.0f, "¶", "¶", "¶", 9}); 
+    keys.push_back({224.0f, row0, 42.0f, 26.0f, "¶", "¶", "¶", 5}); // Calderón tipo 5
     keys.push_back({268.0f, row0, 48.0f, 26.0f, "BACK", "BACK", "BACK", 10}); 
 
     std::string r1_b[10] = {"1","2","3","4","5","6","7","8","9","0"}; 
@@ -632,7 +632,6 @@ void runEditorLoop() {
                 }
             }
         } else {
-            // Teclado principal con TOQUE ÚNICO (Single Tap instantáneo para todas las teclas)
             if (touchJustPressed) {
                 if (touchedIdx != -1) {
                     activeTouchKeyIdx = touchedIdx;
@@ -667,7 +666,6 @@ void runEditorLoop() {
                     for (size_t idx = p; idx < endP; idx++) documento[idx].style.align = activeStyle.align;
                 }
             } 
-            else if (key.type == 9) { showPilcrow = !showPilcrow; } 
             else if (key.type == 10) { 
                 if (hasSelection) { pushUndo(); deleteSelection(); } 
                 else if (cursorPos > 0) {
@@ -687,6 +685,7 @@ void runEditorLoop() {
             else if (key.type == 5) {
                 if (key.base == "N") boldActive = !boldActive;
                 else if (key.base == "K") italicActive = !italicActive; 
+                else if (key.base == "¶") showPilcrow = !showPilcrow; // Calderón activo
                 else if (key.base == "S") {
                     if (isZLHeld) { underlineActive = true; strikeActive = true; }
                     else if (isLHeld) { strikeActive = !strikeActive; }
@@ -1016,19 +1015,21 @@ void runEditorLoop() {
                     bool activo = false;
                     if (key.base == "N") activo = boldActive;
                     else if (key.base == "K") activo = italicActive; 
+                    else if (key.base == "¶") activo = showPilcrow; 
                     else if (key.base == "S") {
                         if (isZLHeld) activo = (underlineActive && strikeActive);
                         else if (isLHeld) activo = strikeActive;
                         else activo = underlineActive;
                     }
-                    else if (key.type == 9) activo = showPilcrow;
                     
                     if (key.base == "K" && italicActive) {
+                        cFondo = COLOR_ROJO; cTexto = COLOR_BLANCO;
+                    } else if (key.base == "¶" && showPilcrow) { 
                         cFondo = COLOR_ROJO; cTexto = COLOR_BLANCO;
                     } else if (activo) { 
                         cFondo = COLOR_MUSGO; cTexto = COLOR_BLANCO; 
                     } else { 
-                        if (key.base == "N" || key.base == "K" || key.base == "S" || key.type == 6 || key.type == 7 || key.type == 9) {
+                        if (key.base == "N" || key.base == "K" || key.base == "S" || key.base == "¶" || key.type == 6 || key.type == 7) {
                             cFondo = C2D_Color32(180, 185, 195, 255); 
                         } else {
                             cFondo = C2D_Color32(200, 205, 215, 255); 
@@ -1043,7 +1044,6 @@ void runEditorLoop() {
                     cFondo = COLOR_MUSGO; cTexto = COLOR_BLANCO;
                 }
 
-                // Borde simple restaurado
                 C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, cFondo);
                 C2D_DrawRectSolid(key.x, key.y + key.h - 1.5f, 0.35f, key.w, 1.5f, C2D_Color32(150, 155, 165, 255));
 
@@ -1054,7 +1054,7 @@ void runEditorLoop() {
                     C2D_DrawRectSolid(key.x, key.y, 0.35f, key.w, 1.5f, COLOR_MUSGO);
                     C2D_DrawRectSolid(key.x, key.y + key.h - 1.5f, 0.35f, key.w, 1.5f, COLOR_MUSGO);
                     C2D_DrawRectSolid(key.x, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO);
-                    C2D_DrawRectSolid(key.x + key.w - 1.5f, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO);
+                    C2D_DrawRectSolid(key.x + key.w - 1.5f, key.y, 0.35f, 1.5f, key.h, key.h, COLOR_MUSGO);
                 }
 
                 if (key.type == 6) { 
@@ -1079,6 +1079,10 @@ void runEditorLoop() {
                     if (key.type == 5 && key.base == "K") {
                         if (italicActive) mainChar = "ERR"; else mainChar = "K";
                         txX = (key.w/2.0f) - (italicActive ? 12.0f : 6.0f);
+                    }
+                    if (key.type == 5 && key.base == "¶") { 
+                        if (showPilcrow) mainChar = "ERR"; else mainChar = "¶";
+                        txX = (key.w/2.0f) - (showPilcrow ? 12.0f : 6.0f);
                     }
                     if (key.type == 5 && key.base == "S") {
                         if (isZLHeld) mainChar = "S/T"; else if (isLHeld) mainChar = "T"; else mainChar = "S";
