@@ -17,19 +17,22 @@ def generate_assets():
         d.text((12, 12), "L", fill=(255, 255, 255, 255))
         img.save(icon_path)
 
-    # Generar splash screen PNG y convertir a .t3x con tex3ds
+    # Generar splash screen PNG
     splash_png = "assets/splash.png"
-    if not os.path.exists(splash_png):
-        img = Image.new('RGBA', (256, 128), (250, 250, 245, 255))
-        d = ImageDraw.Draw(img)
-        d.text((80, 50), "Laura 3DS", fill=(78, 122, 101, 255))
-        img.save(splash_png)
+    img = Image.new('RGBA', (256, 128), (250, 250, 245, 255))
+    d = ImageDraw.Draw(img)
+    d.text((80, 50), "Laura 3DS", fill=(78, 122, 101, 255))
+    img.save(splash_png)
 
     splash_t3x = "romfs/splash.t3x"
-    if subprocess.run(["which", "tex3ds"], capture_output=True).returncode == 0:
-        subprocess.run(["tex3ds", "-i", splash_png, "-o", splash_t3x], check=True)
-    else:
-        # Fallback de respaldo si tex3ds no está en el entorno local (en GitHub Actions tex3ds se incluye con 3dstools)
+    try:
+        if subprocess.run(["which", "tex3ds"], capture_output=True).returncode == 0:
+            # Sintaxis correcta de tex3ds: -o <output> <input>
+            subprocess.run(["tex3ds", "-o", splash_t3x, splash_png], check=True)
+        else:
+            img.save(splash_t3x)
+    except Exception as e:
+        print(f"Advertencia al ejecutar tex3ds: {e}. Usando respaldo de respaldo.")
         img.save(splash_t3x)
 
     print("¡Recursos listos!")
