@@ -69,7 +69,11 @@ export DEPSDIR	:=	$(CURDIR)
 CDEPS		:=	$(addsuffix .d,$(basename $(CFILES)))
 CPPDEPS		:=	$(addsuffix .d,$(basename $(CPPFILES)))
 
+ifneq ($(wildcard $(DEVKITPRO)/libctru/switch_rules),)
 include $(DEVKITPRO)/libctru/switch_rules
+else
+$(error "Please install devkitPro and libctru (switch_rules not found at $(DEVKITPRO)/libctru/switch_rules)")
+endif
 
 output: $(TARGET).3dsx
 
