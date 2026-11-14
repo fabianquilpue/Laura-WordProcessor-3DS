@@ -250,7 +250,7 @@ void runEditorLoop() {
         C2D_TextBufClear(dynamicBuf);
     }
 
-    // --- TECLADO Y DISEÑO (Fila 0 optimizada con mayor altura para facilitar el toque) ---
+    // --- TECLADO Y DISEÑO ---
     std::vector<KeyButton> keys; 
     float btnW = 29.5f, btnH = 31.0f, gap = 2.0f;
     float row0 = 2.0f, row1 = 30.0f, row2 = 64.0f, row3 = 98.0f, row4 = 132.0f, row5 = 166.0f, row6 = 202.0f;
@@ -1054,7 +1054,7 @@ void runEditorLoop() {
                     C2D_DrawRectSolid(key.x, key.y, 0.35f, key.w, 1.5f, COLOR_MUSGO);
                     C2D_DrawRectSolid(key.x, key.y + key.h - 1.5f, 0.35f, key.w, 1.5f, COLOR_MUSGO);
                     C2D_DrawRectSolid(key.x, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO);
-                    C2D_DrawRectSolid(key.x + key.w - 1.5f, key.y, 0.35f, 1.5f, COLOR_MUSGO);
+                    C2D_DrawRectSolid(key.x + key.w - 1.5f, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO);
                 }
 
                 if (key.type == 6) { 
