@@ -45,8 +45,7 @@ all: $(TARGET).3dsx $(TARGET).cia
 $(TARGET).3dsx: $(BUILD)/$(TARGET).elf
 	@echo builtin 3dsx...
 	3dsxtool $< $@
-	@smdhtool --create "Laura Word Processor" "Editor de texto minimalista" "Laura" $(TARGET).smdh || true
-	@bannertool makesmdh -s "Laura Word Processor" -l "Laura" -p "Autor" -i assets/icon.png -o $(TARGET).smdh || true
+	@bannertool makesmdh -s "Laura Word Processor" -l "Laura" -p "Laura Dev" -i assets/icon.png -o $(TARGET).smdh || smdhtool --create "Laura Word Processor" "Editor de texto" "Laura" $(TARGET).smdh || true
 
 $(TARGET).cia: $(TARGET).3dsx
 	@echo builtin cia...
