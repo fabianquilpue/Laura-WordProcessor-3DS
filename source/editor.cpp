@@ -526,8 +526,11 @@ void runEditorLoop() {
 
         if (menuAbierto != 0) {
             if (touchJustPressed) {
-                if (menuAbierto == 1) { 
-                    if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) menuAbierto = 0; 
+                // Cruz roja común en la esquina superior derecha (x: 275-300, y: 12-37)
+                if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) {
+                    if (menuAbierto == 3 || menuAbierto == 4) menuAbierto = 2;
+                    else menuAbierto = 0;
+                } else if (menuAbierto == 1) { 
                     if (touch.px >= 15 && touch.px <= 45 && touch.py >= 70 && touch.py <= 98) { activeStyle.fontSize = std::max(12, activeStyle.fontSize - 2); formatMenuRow = 0; formatMenuCol = 0; }
                     if (touch.px >= 95 && touch.px <= 125 && touch.py >= 70 && touch.py <= 98) { activeStyle.fontSize = std::min(72, activeStyle.fontSize + 2); formatMenuRow = 0; formatMenuCol = 1; }
                     
@@ -546,8 +549,7 @@ void runEditorLoop() {
                         }
                     }
                 } else if (menuAbierto == 2) { 
-                    if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) { menuAbierto = 0; } 
-                    else if (touch.px >= 60 && touch.px <= 260) {
+                    if (touch.px >= 60 && touch.px <= 260) {
                         if (touch.py >= 50 && touch.py <= 75) { startMenuSel = 0; guardarEnRTF(documento, fileName, ultimaHoraGuardado); menuAbierto = 0; } 
                         if (touch.py >= 85 && touch.py <= 110) { 
                             startMenuSel = 1;
@@ -566,14 +568,11 @@ void runEditorLoop() {
                         if (touch.py >= 190 && touch.py <= 215) { startMenuSel = 4; menuAbierto = 7; confirmSel = 1; } 
                     }
                 } else if (menuAbierto == 3) { 
-                    if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) { menuAbierto = 2; }
-                    else if (touch.px >= 180 && touch.px <= 290 && touch.py >= 195 && touch.py <= 220) { manualMenuSel = 0; menuAbierto = 4; }
+                    if (touch.px >= 180 && touch.px <= 290 && touch.py >= 195 && touch.py <= 220) { manualMenuSel = 0; menuAbierto = 4; }
                 } else if (menuAbierto == 4) {
-                    if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) { menuAbierto = 2; }
-                    else if (touch.px >= 20 && touch.px <= 120 && touch.py >= 195 && touch.py <= 220) { manualMenuSel = 0; menuAbierto = 3; }
+                    if (touch.px >= 20 && touch.px <= 120 && touch.py >= 195 && touch.py <= 220) { manualMenuSel = 0; menuAbierto = 3; }
                     else if (touch.px >= 140 && touch.px <= 250 && touch.py >= 195 && touch.py <= 220) { manualMenuSel = 1; menuAbierto = 2; }
                 } else if (menuAbierto == 5) { 
-                    if (touch.px >= 275 && touch.px <= 300 && touch.py >= 12 && touch.py <= 37) { menuAbierto = 2; }
                     for (int i = 0; i < 5 && (fileScroll + i) < (int)fileList.size(); i++) {
                         if (touch.px >= 20 && touch.px <= 280 && touch.py >= 50 + (i*30) && touch.py <= 75 + (i*30)) {
                             openMenuSel = i; menuAbierto = 6; confirmSel = 1;
@@ -777,13 +776,12 @@ void runEditorLoop() {
             C2D_DrawText(&mTxt, C2D_WithColor, 20, 14, 0.7f, 0.42f, 0.42f, COLOR_BLANCO);
             
             if (menuAbierto == 3) {
-                // Página 1 superior: Reseña institucional limpia y ajustada
-                C2D_Text t3; C2D_TextParse(&t3, dynamicBuf, "«Laura» es un procesador de textos diseñado expresamente para la Nintendo 3DS, ofreciendo una experiencia de escritura fluida y libre de distracciones.\n\nInspirado en la ergonomía de las máquinas de escribir tradicionales, reúne funciones esenciales en un entorno portátil ideal para la creación.");
-                C2D_TextOptimize(&t3); C2D_DrawText(&t3, C2D_WithColor, 20, 44, 0.7f, 0.38f, 0.38f, COLOR_NEGRO);
+                // Página 1 superior con márgenes controlados y texto adaptado (ajustado para no salir de 360px de ancho)
+                C2D_Text t3; C2D_TextParse(&t3, dynamicBuf, "«Laura» es un procesador de textos para\nNintendo 3DS, fluido y libre de distracciones.\n\nInspirado en la ergonomía de las máquinas\nde escribir tradicionales, ofrece un entorno\nportátil ideal para la creación literaria.");
+                C2D_TextOptimize(&t3); C2D_DrawText(&t3, C2D_WithColor, 20, 48, 0.7f, 0.42f, 0.42f, COLOR_NEGRO);
             } else {
-                // Página 2 superior: Vacía o libre de contacto como se solicitó
-                C2D_Text tTop2; C2D_TextParse(&tTop2, dynamicBuf, "GUIA AVANZADA:\n\n• Utiliza L y R para acceder a mayúsculas y caracteres especiales.\n• Mantén presionado SELECT con la cruceta para seleccionar bloques.\n• Todos los documentos se guardan automáticamente en formato RTF.");
-                C2D_TextOptimize(&tTop2); C2D_DrawText(&tTop2, C2D_WithColor, 20, 44, 0.7f, 0.42f, 0.42f, COLOR_NEGRO);
+                C2D_Text tTop2; C2D_TextParse(&tTop2, dynamicBuf, "GUIA DE USO:\n\n• Usa L y R para mayúsculas y símbolos.\n• Mantén SELECT con D-Pad para seleccionar.\n• Los archivos se guardan en formato RTF.");
+                C2D_TextOptimize(&tTop2); C2D_DrawText(&tTop2, C2D_WithColor, 20, 48, 0.7f, 0.42f, 0.42f, COLOR_NEGRO);
             }
         } else {
             float textTopMargin = 10.0f;
@@ -861,6 +859,8 @@ void runEditorLoop() {
             C2D_DrawRectSolid(10, 10, 0.5f, 300, 28, COLOR_MUSGO); 
             C2D_Text titleTxt; C2D_TextParse(&titleTxt, dynamicBuf, "AJUSTES DE FORMATO"); C2D_TextOptimize(&titleTxt);
             C2D_DrawText(&titleTxt, C2D_WithColor, 20, 16, 0.6f, 0.42f, 0.42f, COLOR_BLANCO);
+            C2D_DrawRectSolid(275, 12, 0.6f, 25, 25, COLOR_ROJO);
+            C2D_Text xTxt; C2D_TextParse(&xTxt, dynamicBuf, "X"); C2D_TextOptimize(&xTxt); C2D_DrawText(&xTxt, C2D_WithColor, 283, 15, 0.7f, 0.4f, 0.4f, COLOR_BLANCO);
 
             C2D_Text lblSz; C2D_TextParse(&lblSz, dynamicBuf, "Tamaño"); C2D_TextOptimize(&lblSz);
             C2D_DrawText(&lblSz, C2D_WithColor, 15, 48, 0.6f, 0.38f, 0.38f, COLOR_NEGRO);
@@ -904,6 +904,8 @@ void runEditorLoop() {
             C2D_DrawRectSolid(10, 10, 0.5f, 300, 28, COLOR_MUSGO); 
             C2D_Text titleTxt; C2D_TextParse(&titleTxt, dynamicBuf, "MENU PRINCIPAL"); C2D_TextOptimize(&titleTxt);
             C2D_DrawText(&titleTxt, C2D_WithColor, 20, 16, 0.6f, 0.42f, 0.42f, COLOR_BLANCO);
+            C2D_DrawRectSolid(275, 12, 0.6f, 25, 25, COLOR_ROJO);
+            C2D_Text xTxt; C2D_TextParse(&xTxt, dynamicBuf, "X"); C2D_TextOptimize(&xTxt); C2D_DrawText(&xTxt, C2D_WithColor, 283, 15, 0.7f, 0.4f, 0.4f, COLOR_BLANCO);
             
             auto drawBtn = [&](int idx, float y, const char* label) {
                 bool isSel = (startMenuSel == idx);
@@ -927,6 +929,8 @@ void runEditorLoop() {
             C2D_DrawRectSolid(10, 10, 0.5f, 300, 28, COLOR_MUSGO);
             C2D_Text titleTxt; C2D_TextParse(&titleTxt, dynamicBuf, "ABRIR ARCHIVO (sdmc:/)"); C2D_TextOptimize(&titleTxt);
             C2D_DrawText(&titleTxt, C2D_WithColor, 20, 16, 0.6f, 0.42f, 0.42f, COLOR_BLANCO);
+            C2D_DrawRectSolid(275, 12, 0.6f, 25, 25, COLOR_ROJO);
+            C2D_Text xTxt; C2D_TextParse(&xTxt, dynamicBuf, "X"); C2D_TextOptimize(&xTxt); C2D_DrawText(&xTxt, C2D_WithColor, 283, 15, 0.7f, 0.4f, 0.4f, COLOR_BLANCO);
             
             for (int i = 0; i < 5 && (fileScroll + i) < (int)fileList.size(); i++) {
                 bool isSel = (openMenuSel == i);
@@ -962,10 +966,14 @@ void runEditorLoop() {
             C2D_DrawRectSolid(5, 5, 0.6f, 310, 3, COLOR_MUSGO); C2D_DrawRectSolid(5, 232, 0.6f, 310, 3, COLOR_MUSGO);
             C2D_DrawRectSolid(5, 5, 0.6f, 3, 230, COLOR_MUSGO); C2D_DrawRectSolid(312, 5, 0.6f, 3, 230, COLOR_MUSGO);
             
+            // Cruz roja para cerrar el manual / ajustes de usuario
+            C2D_DrawRectSolid(275, 8, 0.65f, 25, 25, COLOR_ROJO);
+            C2D_Text xM; C2D_TextParse(&xM, dynamicBuf, "X"); C2D_TextOptimize(&xM); C2D_DrawText(&xM, C2D_WithColor, 283, 11, 0.7f, 0.4f, 0.4f, COLOR_BLANCO);
+
             if (menuAbierto == 3) {
-                // Manual Pág 1 Inferior (Texto más grande)
-                C2D_Text t2; C2D_TextParse(&t2, dynamicBuf, "• Pegar sin formato: L + A\n• Salto de línea: R | Salto de pág: ZL+R\n• Borrar: ZR | Borrar palabra: L+ZR\n• Menú: START");
-                C2D_TextOptimize(&t2); C2D_DrawText(&t2, C2D_WithColor, 15, 25, 0.7f, 0.38f, 0.38f, COLOR_NEGRO);
+                // Manual Pág 1 Inferior (Texto agrandado)
+                C2D_Text t2; C2D_TextParse(&t2, dynamicBuf, "• Pegar sin formato: L + A\n• Salto de línea: R | Pág: ZL+R\n• Borrar: ZR | Palabra: L+ZR\n• Menú: START");
+                C2D_TextOptimize(&t2); C2D_DrawText(&t2, C2D_WithColor, 15, 35, 0.7f, 0.42f, 0.42f, COLOR_NEGRO);
                 
                 bool breathS = (manualMenuSel == 0 && ((osGetTime() / 300) % 2 == 0));
                 u32 bColS = breathS ? COLOR_MUSGO : C2D_Color32(220, 220, 225, 255);
@@ -974,11 +982,11 @@ void runEditorLoop() {
                 C2D_Text nTxt; C2D_TextParse(&nTxt, dynamicBuf, "SIGUIENTE >"); C2D_TextOptimize(&nTxt);
                 C2D_DrawText(&nTxt, C2D_WithColor, 190, 200, 0.7f, 0.45f, 0.45f, tColS);
             } else {
-                // Manual Pág 2 Inferior: Información de contacto exactamente a mitad de pantalla (arriba-abajo)
+                // Manual Pág 2 Inferior: Información de contacto exactamente a mitad de pantalla vertical
                 C2D_Text tContact; 
                 C2D_TextParse(&tContact, dynamicBuf, "Info de Contacto:\nFabián Contreras (CL)\nfabian.contreras.abara@gmail.com\nhttps://github.com/fabianquilpue");
                 C2D_TextOptimize(&tContact); 
-                C2D_DrawText(&tContact, C2D_WithColor, 20, 90, 0.7f, 0.33f, 0.33f, COLOR_MUSGO); // Centrado vertical exacto
+                C2D_DrawText(&tContact, C2D_WithColor, 20, 90, 0.7f, 0.33f, 0.33f, COLOR_MUSGO);
                 
                 bool breathA = (manualMenuSel == 0 && ((osGetTime() / 300) % 2 == 0));
                 u32 bColA = breathA ? COLOR_MUSGO : C2D_Color32(220, 220, 225, 255);
