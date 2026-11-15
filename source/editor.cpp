@@ -163,7 +163,7 @@ void runEditorLoop() {
     C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
     C2D_TextBuf dynamicBuf = C2D_TextBufNew(65536);
 
-    // --- PANTALLA DE BIENVENIDA (SPLASH SCREEN) ---
+    // --- PANTALLA DE BIENVENIDA (SPLASH SCREEN ESTABLE) ---
     {
         C2D_SpriteSheet splashSheet = C2D_SpriteSheetLoad("romfs:/splash.t3x");
         C2D_Image splashImg = {0};
@@ -171,25 +171,14 @@ void runEditorLoop() {
         if (hasSplash) splashImg = C2D_SpriteSheetGetImage(splashSheet, 0);
 
         bool splashActive = true;
-        int fadeAlpha = 255;
-        bool fadingIn = true;
-        bool fadingOut = false;
 
         while (aptMainLoop() && splashActive) {
             hidScanInput();
             u32 kDown = hidKeysDown();
             touchPosition touch; hidTouchRead(&touch);
 
-            if (!fadingOut && (kDown || (kDown & KEY_TOUCH))) {
-                fadingOut = true;
-            }
-
-            if (fadingIn) {
-                fadeAlpha -= 12;
-                if (fadeAlpha <= 0) { fadeAlpha = 0; fadingIn = false; }
-            } else if (fadingOut) {
-                fadeAlpha += 15;
-                if (fadeAlpha >= 255) { fadeAlpha = 255; splashActive = false; }
+            if (kDown || (kDown & KEY_TOUCH)) {
+                splashActive = false;
             }
 
             C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
@@ -226,23 +215,13 @@ void runEditorLoop() {
             C2D_TextGetDimensions(&tCopy, 0.32f, 0.32f, &tw, &th);
             C2D_DrawText(&tCopy, C2D_WithColor, (400.0f - tw)/2.0f, 215.0f, 0.6f, 0.32f, 0.32f, C2D_Color32(120, 120, 120, 255));
 
-            if (fadeAlpha > 0) {
-                C2D_DrawRectSolid(0, 0, 0.9f, 400, 240, C2D_Color32(0, 0, 0, fadeAlpha));
-            }
-
             C2D_TargetClear(bottomScreen, COLOR_BLANCO);
             C2D_SceneBegin(bottomScreen);
 
-            if (!fadingOut) {
-                C2D_Text tPrompt;
-                C2D_TextParse(&tPrompt, dynamicBuf, "Toca la pantalla o presiona cualquier botón para continuar"); C2D_TextOptimize(&tPrompt);
-                C2D_TextGetDimensions(&tPrompt, 0.35f, 0.35f, &tw, &th);
-                C2D_DrawText(&tPrompt, C2D_WithColor, (320.0f - tw)/2.0f, 110.0f, 0.6f, 0.35f, 0.35f, COLOR_MUSGO);
-            }
-
-            if (fadeAlpha > 0) {
-                C2D_DrawRectSolid(0, 0, 0.9f, 320, 240, C2D_Color32(0, 0, 0, fadeAlpha));
-            }
+            C2D_Text tPrompt;
+            C2D_TextParse(&tPrompt, dynamicBuf, "Toca la pantalla o presiona cualquier botón para continuar"); C2D_TextOptimize(&tPrompt);
+            C2D_TextGetDimensions(&tPrompt, 0.35f, 0.35f, &tw, &th);
+            C2D_DrawText(&tPrompt, C2D_WithColor, (320.0f - tw)/2.0f, 110.0f, 0.6f, 0.35f, 0.35f, COLOR_MUSGO);
 
             C3D_FrameEnd(0);
         }
@@ -250,7 +229,7 @@ void runEditorLoop() {
         C2D_TextBufClear(dynamicBuf);
     }
 
-    // --- TECLADO Y DISEÑO (Fila 0 con ¶ usando tipo 5 igual que K, N, S) ---
+    // --- TECLADO Y DISEÑO ---
     std::vector<KeyButton> keys; 
     float btnW = 29.5f, btnH = 31.0f, gap = 2.0f;
     float row0 = 2.0f, row1 = 30.0f, row2 = 64.0f, row3 = 98.0f, row4 = 132.0f, row5 = 166.0f, row6 = 202.0f;
@@ -260,7 +239,7 @@ void runEditorLoop() {
     keys.push_back({92.0f, row0, 42.0f, 26.0f, "S", "S", "S", 5});
     keys.push_back({136.0f, row0, 42.0f, 26.0f, "ALIN", "ALIN", "ALIN", 6}); 
     keys.push_back({180.0f, row0, 42.0f, 26.0f, "Aa", "Aa", "Aa", 7}); 
-    keys.push_back({224.0f, row0, 42.0f, 26.0f, "¶", "¶", "¶", 5}); // Calderón tipo 5
+    keys.push_back({224.0f, row0, 42.0f, 26.0f, "¶", "¶", "¶", 5}); 
     keys.push_back({268.0f, row0, 48.0f, 26.0f, "BACK", "BACK", "BACK", 10}); 
 
     std::string r1_b[10] = {"1","2","3","4","5","6","7","8","9","0"}; 
@@ -698,6 +677,17 @@ void runEditorLoop() {
                 activeStyle.italic = italicActive;
                 activeStyle.underline = underlineActive;
                 activeStyle.strike = strikeActive;
+
+                // APLICAR FORMATO INMEDIATO AL TEXTO SELECCIONADO SI EXISTE
+                if (hasSelection && selAnchor != cursorPos) {
+                    pushUndo(); size_t s = std::min(selAnchor, cursorPos), e = std::max(selAnchor, cursorPos);
+                    for (size_t idx = s; idx < e; idx++) {
+                        documento[idx].style.bold = activeStyle.bold;
+                        documento[idx].style.italic = activeStyle.italic;
+                        documento[idx].style.underline = activeStyle.underline;
+                        documento[idx].style.strike = activeStyle.strike;
+                    }
+                }
             } else if (key.type == 4) {
                 if (isZLHeld) estadoTeclaMuerta = 3; else if (isLHeld) estadoTeclaMuerta = 2; else estadoTeclaMuerta = 1;
             } else if (key.type == 0 || key.type == 2) {
@@ -787,15 +777,13 @@ void runEditorLoop() {
             C2D_DrawText(&mTxt, C2D_WithColor, 20, 14, 0.7f, 0.42f, 0.42f, COLOR_BLANCO);
             
             if (menuAbierto == 3) {
-                C2D_Text t1, t2; 
-                C2D_TextParse(&t1, dynamicBuf, "NAVEGACIÓN Y EDICIÓN:\n• D-Pad: Mover cursor\n• SELECT: Activar selección\n• Y: Copiar | L+Y: Cortar | A: Pegar\n• L+A: Pegar sin formato | R: Salto línea\n• ZL+R: Salto de página"); 
-                C2D_TextParse(&t2, dynamicBuf, "BORRADO Y MENÚS:\n• ZR: Borrar carácter\n• L+ZR: Borrar palabra\n• ZL+ZR: Borrar línea\n• START: Menú principal\n\nLaura permite ajustar formato completo.");
-                C2D_TextOptimize(&t1); C2D_TextOptimize(&t2); 
-                C2D_DrawText(&t1, C2D_WithColor, 20, 44, 0.7f, 0.32f, 0.32f, COLOR_NEGRO);
-                C2D_DrawText(&t2, C2D_WithColor, 205, 44, 0.7f, 0.32f, 0.32f, COLOR_NEGRO);
+                // Página 1 superior: Reseña institucional limpia y ajustada
+                C2D_Text t3; C2D_TextParse(&t3, dynamicBuf, "«Laura» es un procesador de textos diseñado expresamente para la Nintendo 3DS, ofreciendo una experiencia de escritura fluida y libre de distracciones.\n\nInspirado en la ergonomía de las máquinas de escribir tradicionales, reúne funciones esenciales en un entorno portátil ideal para la creación.");
+                C2D_TextOptimize(&t3); C2D_DrawText(&t3, C2D_WithColor, 20, 44, 0.7f, 0.38f, 0.38f, COLOR_NEGRO);
             } else {
-                C2D_Text t3; C2D_TextParse(&t3, dynamicBuf, "«Laura» es un procesador de textos diseñado expresamente para la Nintendo 3DS, pensado para ofrecer una experiencia de escritura fluida, limpia y libre de distracciones.\n\nInspirado en la ergonomía de las máquinas de escribir tradicionales, reúne las funciones esenciales en un entorno portátil ideal para la creación literaria.\n\nContacto:\nFabián Contreras (CL)\nfabian.contreras.abara@gmail.com\nhttps://github.com/fabianquilpue");
-                C2D_TextOptimize(&t3); C2D_DrawText(&t3, C2D_WithColor, 20, 44, 0.7f, 0.32f, 0.32f, COLOR_NEGRO);
+                // Página 2 superior: Vacía o libre de contacto como se solicitó
+                C2D_Text tTop2; C2D_TextParse(&tTop2, dynamicBuf, "GUIA AVANZADA:\n\n• Utiliza L y R para acceder a mayúsculas y caracteres especiales.\n• Mantén presionado SELECT con la cruceta para seleccionar bloques.\n• Todos los documentos se guardan automáticamente en formato RTF.");
+                C2D_TextOptimize(&tTop2); C2D_DrawText(&tTop2, C2D_WithColor, 20, 44, 0.7f, 0.42f, 0.42f, COLOR_NEGRO);
             }
         } else {
             float textTopMargin = 10.0f;
@@ -975,8 +963,9 @@ void runEditorLoop() {
             C2D_DrawRectSolid(5, 5, 0.6f, 3, 230, COLOR_MUSGO); C2D_DrawRectSolid(312, 5, 0.6f, 3, 230, COLOR_MUSGO);
             
             if (menuAbierto == 3) {
-                C2D_Text t2; C2D_TextParse(&t2, dynamicBuf, "- Pegar sin formato: L + A\n- Salto de línea: R\n- Salto de página: ZL + R\n- Retroceso: ZR\n- Borrar palabra: L + ZR\n- Borrar línea: ZL + ZR\n- Menú de inicio: START\n\nLaura cuenta con tamaño, interlineado y colores.");
-                C2D_TextOptimize(&t2); C2D_DrawText(&t2, C2D_WithColor, 15, 15, 0.7f, 0.30f, 0.30f, COLOR_NEGRO);
+                // Manual Pág 1 Inferior (Texto más grande)
+                C2D_Text t2; C2D_TextParse(&t2, dynamicBuf, "• Pegar sin formato: L + A\n• Salto de línea: R | Salto de pág: ZL+R\n• Borrar: ZR | Borrar palabra: L+ZR\n• Menú: START");
+                C2D_TextOptimize(&t2); C2D_DrawText(&t2, C2D_WithColor, 15, 25, 0.7f, 0.38f, 0.38f, COLOR_NEGRO);
                 
                 bool breathS = (manualMenuSel == 0 && ((osGetTime() / 300) % 2 == 0));
                 u32 bColS = breathS ? COLOR_MUSGO : C2D_Color32(220, 220, 225, 255);
@@ -985,10 +974,11 @@ void runEditorLoop() {
                 C2D_Text nTxt; C2D_TextParse(&nTxt, dynamicBuf, "SIGUIENTE >"); C2D_TextOptimize(&nTxt);
                 C2D_DrawText(&nTxt, C2D_WithColor, 190, 200, 0.7f, 0.45f, 0.45f, tColS);
             } else {
+                // Manual Pág 2 Inferior: Información de contacto exactamente a mitad de pantalla (arriba-abajo)
                 C2D_Text tContact; 
                 C2D_TextParse(&tContact, dynamicBuf, "Info de Contacto:\nFabián Contreras (CL)\nfabian.contreras.abara@gmail.com\nhttps://github.com/fabianquilpue");
                 C2D_TextOptimize(&tContact); 
-                C2D_DrawText(&tContact, C2D_WithColor, 15, 40, 0.7f, 0.35f, 0.35f, COLOR_MUSGO);
+                C2D_DrawText(&tContact, C2D_WithColor, 20, 90, 0.7f, 0.33f, 0.33f, COLOR_MUSGO); // Centrado vertical exacto
                 
                 bool breathA = (manualMenuSel == 0 && ((osGetTime() / 300) % 2 == 0));
                 u32 bColA = breathA ? COLOR_MUSGO : C2D_Color32(220, 220, 225, 255);
@@ -1054,7 +1044,7 @@ void runEditorLoop() {
                     C2D_DrawRectSolid(key.x, key.y, 0.35f, key.w, 1.5f, COLOR_MUSGO);
                     C2D_DrawRectSolid(key.x, key.y + key.h - 1.5f, 0.35f, key.w, 1.5f, COLOR_MUSGO);
                     C2D_DrawRectSolid(key.x, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO);
-                    C2D_DrawRectSolid(key.x + key.w - 1.5f, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO); // Corregido aquí
+                    C2D_DrawRectSolid(key.x + key.w - 1.5f, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO);
                 }
 
                 if (key.type == 6) { 
@@ -1087,6 +1077,13 @@ void runEditorLoop() {
                     if (key.type == 5 && key.base == "S") {
                         if (isZLHeld) mainChar = "S/T"; else if (isLHeld) mainChar = "T"; else mainChar = "S";
                         txX = (key.w/2.0f) - 9.0f;
+                    }
+                    if (key.type == 2) {
+                        if (isZLHeld) mainChar = "+indent";
+                        else if (isLHeld) mainChar = "TAB";
+                        else mainChar = "ESPACIO";
+                        txX = (key.w / 2.0f) - (isZLHeld ? 22.0f : (isLHeld ? 16.0f : 30.0f));
+                        sX = 0.38f;
                     }
                     if (key.type == 10) { 
                         mainChar = isZLHeld ? "LINE" : (isLHeld ? "WORD" : "BACK");
