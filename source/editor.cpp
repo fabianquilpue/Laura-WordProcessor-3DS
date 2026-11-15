@@ -163,7 +163,7 @@ void runEditorLoop() {
     C3D_RenderTarget* bottomScreen = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
     C2D_TextBuf dynamicBuf = C2D_TextBufNew(65536);
 
-    // --- PANTALLA DE BIENVENIDA (SPLASH SCREEN ESTABLE) ---
+    // --- PANTALLA DE BIENVENIDA (SPLASH SCREEN ESTABLE Y PERSISTENTE) ---
     {
         C2D_SpriteSheet splashSheet = C2D_SpriteSheetLoad("romfs:/splash.t3x");
         C2D_Image splashImg = {0};
@@ -221,7 +221,11 @@ void runEditorLoop() {
             C2D_Text tPrompt;
             C2D_TextParse(&tPrompt, dynamicBuf, "Toca la pantalla o presiona cualquier botón para continuar"); C2D_TextOptimize(&tPrompt);
             C2D_TextGetDimensions(&tPrompt, 0.35f, 0.35f, &tw, &th);
-            C2D_DrawText(&tPrompt, C2D_WithColor, (320.0f - tw)/2.0f, 110.0f, 0.6f, 0.35f, 0.35f, COLOR_MUSGO);
+            
+            // Texto parpadeando rítmicamente en color verde musgo (COLOR_MUSGO)
+            bool blinkSplash = ((osGetTime() / 300) % 2 == 0);
+            u32 promptColor = blinkSplash ? COLOR_MUSGO : C2D_Color32(150, 185, 165, 255);
+            C2D_DrawText(&tPrompt, C2D_WithColor, (320.0f - tw)/2.0f, 110.0f, 0.6f, 0.35f, 0.35f, promptColor);
 
             C3D_FrameEnd(0);
         }
@@ -774,13 +778,13 @@ void runEditorLoop() {
             C2D_DrawText(&mTxt, C2D_WithColor, 20, 14, 0.7f, 0.42f, 0.42f, COLOR_BLANCO);
             
             if (menuAbierto == 3) {
-                // Página 1 superior: Texto literal exacto solicitado
-                C2D_Text t3; C2D_TextParse(&t3, dynamicBuf, "«Laura» es un procesador de textos diseñado expresamente para la Nintendo 3DS, ofreciendo una experiencia de escritura fluida y libre de distracciones.\n\nInspirado en la ergonomía de las máquinas de escribir tradicionales, reúne funciones esenciales en un entorno portátil ideal para la creación.");
-                C2D_TextOptimize(&t3); C2D_DrawText(&t3, C2D_WithColor, 20, 44, 0.7f, 0.40f, 0.40f, COLOR_NEGRO);
+                // Página 1 superior ajustada perfectamente a los márgenes
+                C2D_Text t3; C2D_TextParse(&t3, dynamicBuf, "«Laura» es un procesador de textos diseñado\nexpresamente para la Nintendo 3DS, ofreciendo\nuna experiencia de escritura fluida y libre de\ndistracciones.\n\nInspirado en la ergonomía de las máquinas de\nescribir tradicionales, reúne funciones esenciales\nen un entorno portátil ideal para la creación.");
+                C2D_TextOptimize(&t3); C2D_DrawText(&t3, C2D_WithColor, 20, 44, 0.7f, 0.36f, 0.36f, COLOR_NEGRO);
             } else {
-                // Página 2 superior: SÓLO la reseña institucional extendida
-                C2D_Text tTop2; C2D_TextParse(&tTop2, dynamicBuf, "«Laura» optimiza la escritura móvil mediante una interfaz cálida y de bajo estrés visual. Su motor de renderizado respeta márgenes y tipografías clásicas para garantizar la máxima comodidad en sesiones prolongadas.");
-                C2D_TextOptimize(&tTop2); C2D_DrawText(&tTop2, C2D_WithColor, 20, 48, 0.7f, 0.42f, 0.42f, COLOR_NEGRO);
+                // Página 2 superior: SÓLO reseña ajustada
+                C2D_Text tTop2; C2D_TextParse(&tTop2, dynamicBuf, "«Laura» optimiza la escritura móvil mediante\nuna interfaz cálida y de bajo estrés visual.\nSu motor de renderizado respeta márgenes y\ntipografías clásicas para garantizar la máxima\ncomodidad en sesiones prolongadas.");
+                C2D_TextOptimize(&tTop2); C2D_DrawText(&tTop2, C2D_WithColor, 20, 44, 0.7f, 0.38f, 0.38f, COLOR_NEGRO);
             }
         } else {
             float textTopMargin = 10.0f;
@@ -969,9 +973,9 @@ void runEditorLoop() {
             C2D_Text xM; C2D_TextParse(&xM, dynamicBuf, "X"); C2D_TextOptimize(&xM); C2D_DrawText(&xM, C2D_WithColor, 283, 11, 0.7f, 0.4f, 0.4f, COLOR_BLANCO);
 
             if (menuAbierto == 3) {
-                // Manual Pág 1 Inferior (Texto agrandado)
+                // Manual Pág 1 Inferior (Texto agrandado y ajustado)
                 C2D_Text t2; C2D_TextParse(&t2, dynamicBuf, "• Pegar sin formato: L + A\n• Salto de línea: R | Pág: ZL+R\n• Borrar: ZR | Palabra: L+ZR\n• Menú: START");
-                C2D_TextOptimize(&t2); C2D_DrawText(&t2, C2D_WithColor, 15, 35, 0.7f, 0.42f, 0.42f, COLOR_NEGRO);
+                C2D_TextOptimize(&t2); C2D_DrawText(&t2, C2D_WithColor, 15, 35, 0.7f, 0.40f, 0.40f, COLOR_NEGRO);
                 
                 bool breathS = (manualMenuSel == 0 && ((osGetTime() / 300) % 2 == 0));
                 u32 bColS = breathS ? COLOR_MUSGO : C2D_Color32(220, 220, 225, 255);
@@ -980,7 +984,7 @@ void runEditorLoop() {
                 C2D_Text nTxt; C2D_TextParse(&nTxt, dynamicBuf, "SIGUIENTE >"); C2D_TextOptimize(&nTxt);
                 C2D_DrawText(&nTxt, C2D_WithColor, 190, 200, 0.7f, 0.45f, 0.45f, tColS);
             } else {
-                // Página 2 inferior: SÓLO la info de contacto exactamente a mitad de pantalla vertical
+                // Página 2 inferior: SÓLO info de contacto centrada verticalmente exactamente
                 C2D_Text tContact; 
                 C2D_TextParse(&tContact, dynamicBuf, "Info de Contacto:\nFabián Contreras (CL)\nfabian.contreras.abara@gmail.com\nhttps://github.com/fabianquilpue");
                 C2D_TextOptimize(&tContact); 
@@ -1040,14 +1044,13 @@ void runEditorLoop() {
                     cFondo = COLOR_MUSGO; cTexto = COLOR_BLANCO;
                 }
 
-                // Dibujar fondo de tecla y MARCO VISIBLE (Outline / Borde alrededor de cada tecla)
+                // Dibujar fondo y marco visible en cada tecla
                 C2D_DrawRectSolid(key.x, key.y, 0.3f, key.w, key.h, cFondo);
-                // Marco exterior de 1px en gris pizarra/negro para que cada tecla sea perfectamente visible
                 u32 cBorde = C2D_Color32(120, 125, 135, 255);
-                C2D_DrawRectSolid(key.x, key.y, 0.35f, key.w, 1.0f, cBorde); // Borde superior
-                C2D_DrawRectSolid(key.x, key.y + key.h - 1.0f, 0.35f, key.w, 1.0f, cBorde); // Borde inferior
-                C2D_DrawRectSolid(key.x, key.y, 0.35f, 1.0f, key.h, cBorde); // Borde izquierdo
-                C2D_DrawRectSolid(key.x + key.w - 1.0f, key.y, 0.35f, 1.0f, key.h, cBorde); // Borde derecho
+                C2D_DrawRectSolid(key.x, key.y, 0.35f, key.w, 1.0f, cBorde);
+                C2D_DrawRectSolid(key.x, key.y + key.h - 1.0f, 0.35f, key.w, 1.0f, cBorde);
+                C2D_DrawRectSolid(key.x, key.y, 0.35f, 1.0f, key.h, cBorde);
+                C2D_DrawRectSolid(key.x + key.w - 1.0f, key.y, 0.35f, 1.0f, key.h, cBorde);
 
                 if (key.type == 7) {
                     C2D_DrawTriangle(key.x + key.w - 10, key.y + 4, 0.4f,
@@ -1056,7 +1059,7 @@ void runEditorLoop() {
                     C2D_DrawRectSolid(key.x, key.y, 0.35f, key.w, 1.5f, COLOR_MUSGO);
                     C2D_DrawRectSolid(key.x, key.y + key.h - 1.5f, 0.35f, key.w, 1.5f, COLOR_MUSGO);
                     C2D_DrawRectSolid(key.x, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO);
-                    C2D_DrawRectSolid(key.x + key.w - 1.5f, key.y, 0.35f, 1.5f, key.h, COLOR_MUSGO);
+                    C2D_DrawRectSolid(key.x + key.w - 1.5f, key.y, 0.35f, 1.5f, COLOR_MUSGO);
                 }
 
                 if (key.type == 6) { 
@@ -1091,18 +1094,18 @@ void runEditorLoop() {
                         txX = (key.w/2.0f) - 9.0f;
                     }
                     if (key.type == 2) {
-                        // Renderizado correcto de iconos e indicaciones para barra espaciadora en estados normal, L y ZL
+                        // Renderizado garantizado y visible para barra espaciadora en estado normal, L y ZL
                         if (isZLHeld) {
-                            mainChar = "+indent";
-                            txX = (key.w / 2.0f) - 22.0f;
+                            mainChar = "[ +INDENT ]";
+                            txX = (key.w / 2.0f) - 34.0f;
                         } else if (isLHeld) {
-                            mainChar = "TAB ⇥";
-                            txX = (key.w / 2.0f) - 22.0f;
+                            mainChar = "[ TAB ]";
+                            txX = (key.w / 2.0f) - 24.0f;
                         } else {
-                            mainChar = "␣ ESPACIO ␣";
-                            txX = (key.w / 2.0f) - 36.0f;
+                            mainChar = "[ ESPACIO ]";
+                            txX = (key.w / 2.0f) - 32.0f;
                         }
-                        sX = 0.38f;
+                        sX = 0.42f;
                     }
                     if (key.type == 10) { 
                         mainChar = isZLHeld ? "LINE" : (isLHeld ? "WORD" : "BACK");
