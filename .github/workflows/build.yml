@@ -16,11 +16,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Python, Pillow and tools
+      - name: Install Python and Pillow
         run: |
           apt-get update
           apt-get install -y python3 python3-pil
-          dkp-pacman -Syu --noconfirm citro2d citro3d libctru 3dstools
 
       - name: Build Laura 3DS
         run: |
