@@ -43,16 +43,20 @@ OBJS		:=	$(addprefix $(BUILD)/,$(CFILES:.c=.o) $(CPPFILES:.cpp=.o) $(SFILES:.s=.
 all: $(TARGET).smdh $(TARGET).3dsx
 
 $(TARGET).smdh: assets/icon.png
-	@echo Generando smdh con smdhtool...
-	smdhtool --create "Laura Word Processor" "Laura" "Laura Dev" assets/icon.png $@
+	@echo "Generando SMDH con ícono..."
+	@smdhtool --create "Laura Word Processor" "Procesador de textos para 3DS" "Laura Dev" assets/icon.png $@
 
 $(TARGET).3dsx: $(BUILD)/$(TARGET).elf $(TARGET).smdh
-	@echo Generando 3dsx con smdh incrustado...
-	3dsxtool $< $@ --smdh=$(TARGET).smdh
+	@echo "Empaquetando 3DSX con ícono y RomFS..."
+	@if [ -d "$(ROMFS)" ]; then \
+		3dsxtool $< $@ --smdh=$(TARGET).smdh --romfs=$(ROMFS); \
+	else \
+		3dsxtool $< $@ --smdh=$(TARGET).smdh; \
+	fi
 
 $(BUILD)/$(TARGET).elf: $(OBJS)
-	@echo linking ...
-	$(CXX) $(LDFLAGS) $(OBJS) $(LIBS) -o $@
+	@echo "Enlazando $@..."
+	@$(CXX) $(LDFLAGS) $(OBJS) $(LIBS) -o $@
 
 $(BUILD)/%.o: %.cpp
 	@mkdir -p $(dir $@)
@@ -65,7 +69,7 @@ $(BUILD)/%.o: %.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(TARGET).bnr
+	@echo "Limpiando compilación..."
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh
 
 .PHONY: all clean
