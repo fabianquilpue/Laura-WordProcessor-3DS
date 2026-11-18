@@ -1,40 +1,112 @@
+
 name: Build Laura - Word Processor 3DS
 
 on:
   push:
     branches: [ main, master ]
+
   pull_request:
     branches: [ main, master ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     container:
       image: devkitpro/devkitarm:latest
 
     steps:
+      # -----------------------------------------------
+      # Descargar repositorio
+      # -----------------------------------------------
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Python, Pillow and tools
+      # -----------------------------------------------
+      # Instalar dependencias
+      # -----------------------------------------------
+
+      - name: Install dependencies
         run: |
           apt-get update
           apt-get install -y python3 python3-pil
-          dkp-pacman -S --noconfirm citro2d citro3d libctru 3dstools
+
+          dkp-pacman -Syu --noconfirm
+
+          dkp-pacman -S --noconfirm \
+            devkitARM \
+            libctru \
+            citro2d \
+            citro3d \
+            3dstools \
+            tex3ds
+
+      # -----------------------------------------------
+      # Configurar entorno
+      # -----------------------------------------------
+
+      - name: Configure devkitPro environment
+        run: |
+          echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+          echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
+          echo "/opt/devkitpro/devkitARM/bin" >> $GITHUB_PATH
+          echo "/opt/devkitpro/tools/bin" >> $GITHUB_PATH
+
+      # -----------------------------------------------
+      # Comprobar recursos originales
+      # -----------------------------------------------
+
+      - name: Verify original assets
+        run: |
+          test -f assets/icon.png
+          test -f assets/splash.png
+          test -f tools/generate_assets.py
+
+          echo "Recursos originales encontrados."
+
+      # -----------------------------------------------
+      # Generar recursos gráficos
+      # -----------------------------------------------
+
+      - name: Generate Laura assets
+        run: |
+          python3 tools/generate_assets.py
+
+          test -s romfs/splash.t3x
+
+      # -----------------------------------------------
+      # Compilar aplicación
+      # -----------------------------------------------
 
       - name: Build Laura 3DS
         run: |
-          export DEVKITPRO=/opt/devkitpro
-          export DEVKITARM=$DEVKITPRO/devkitARM
-          
-          mkdir -p assets/fonts data
-          python3 tools/generate_assets.py
-          make
+          make clean
+          make -j2
+
+      # -----------------------------------------------
+      # Verificar ejecutables
+      # -----------------------------------------------
+
+      - name: Verify build outputs
+        run: |
+          test -s Laura.3dsx
+          test -s Laura.smdh
+
+          echo "Compilación finalizada correctamente."
+
+      # -----------------------------------------------
+      # Publicar artefactos
+      # -----------------------------------------------
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
+
         with:
           name: Laura-WordProcessor-3DS
+
           path: |
             Laura.3dsx
             Laura.smdh
+
+          if-no-files-found: error
