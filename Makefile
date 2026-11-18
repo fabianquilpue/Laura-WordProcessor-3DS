@@ -1,3 +1,4 @@
+
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 #---------------------------------------------------------------------------------
@@ -8,64 +9,114 @@ endif
 
 include $(DEVKITARM)/3ds_rules
 
-TARGET		:=	Laura
-BUILD		:=	build
-SOURCES		:=	source
-INCLUDES	:=	include
-DATA		:=	data
-ROMFS		:=	romfs
+#---------------------------------------------------------------------------------
+# Configuración general
+#---------------------------------------------------------------------------------
 
-PORTLIBS	:=	$(DEVKITPRO)/portlibs/3ds
+TARGET      := Laura
+BUILD       := build
+SOURCES     := source
+INCLUDES    := include
+DATA        := data
+ROMFS       := romfs
 
-ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard
+PORTLIBS    := $(DEVKITPRO)/portlibs/3ds
 
-CFLAGS		:=	-Wall -O2 -ffunction-sections \
-			$(ARCH) -D__3DS__ \
-			-I$(DEVKITPRO)/libctru/include \
-			-I$(PORTLIBS)/include \
-			$(foreach dir,$(INCLUDES),-I$(dir))
+#---------------------------------------------------------------------------------
+# Arquitectura Nintendo 3DS
+#---------------------------------------------------------------------------------
 
-CXXFLAGS	:=	$(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
+ARCH        := -march=armv6k -mtune=mpcore -mfloat-abi=hard
 
-ASFLAGS		:=	$(ARCH)
-LDFLAGS		:=	-specs=3dsx.specs $(ARCH) \
-			-L$(DEVKITPRO)/libctru/lib \
-			-L$(PORTLIBS)/lib
+CFLAGS      := -Wall -O2 -ffunction-sections \
+               $(ARCH) -D__3DS__ \
+               -I$(DEVKITPRO)/libctru/include \
+               -I$(PORTLIBS)/include \
+               $(foreach dir,$(INCLUDES),-I$(dir))
 
-LIBS		:=	-lcitro2d -lcitro3d -lctru -lm
+CXXFLAGS    := $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 
-CFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))
-CPPFILES	:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.cpp))
-SFILES		:=	$(foreach dir,$(SOURCES),$(wildcard $(dir)/*.s))
+ASFLAGS     := $(ARCH)
 
-OBJS		:=	$(addprefix $(BUILD)/,$(CFILES:.c=.o) $(CPPFILES:.cpp=.o) $(SFILES:.s=.o))
+LDFLAGS     := -specs=3dsx.specs $(ARCH) \
+               -L$(DEVKITPRO)/libctru/lib \
+               -L$(PORTLIBS)/lib
+
+LIBS        := -lcitro2d -lcitro3d -lctru -lm
+
+#---------------------------------------------------------------------------------
+# Archivos fuente
+#---------------------------------------------------------------------------------
+
+CFILES      := $(foreach dir,$(SOURCES),$(wildcard $(dir)/*.c))
+CPPFILES    := $(foreach dir,$(SOURCES),$(wildcard $(dir)/*.cpp))
+SFILES      := $(foreach dir,$(SOURCES),$(wildcard $(dir)/*.s))
+
+OBJS        := $(addprefix $(BUILD)/,$(CFILES:.c=.o) \
+               $(CPPFILES:.cpp=.o) \
+               $(SFILES:.s=.o))
+
+#---------------------------------------------------------------------------------
+# Compilación principal
+#---------------------------------------------------------------------------------
 
 all: $(TARGET).smdh $(TARGET).3dsx
 
+#---------------------------------------------------------------------------------
+# Metadatos de Laura
+#---------------------------------------------------------------------------------
+
 $(TARGET).smdh: assets/icon.png
-	@echo builtin smdh...
-	bannertool makesmdh -s "Laura Word Processor" -l "Procesador de texto minimalista para Nintendo 3DS" -p "Laura Dev" -i assets/icon.png -o $@
+	@echo "Generando metadatos de Laura..."
+	bannertool makesmdh \
+		-s "Laura" \
+		-l "Procesador de texto minimalista para Nintendo 3DS" \
+		-p "Laura Dev / Fabián Contreras" \
+		-i assets/icon.png \
+		-o $@
+
+#---------------------------------------------------------------------------------
+# Generación del ejecutable 3DSX
+#---------------------------------------------------------------------------------
 
 $(TARGET).3dsx: $(BUILD)/$(TARGET).elf $(TARGET).smdh
-	@echo builtin 3dsx with embedded smdh...
-	3dsxtool $< $@ --smdh=$(TARGET).smdh
+	@echo "Generando ejecutable Laura.3dsx..."
+	3dsxtool $< $@ \
+		--smdh=$(TARGET).smdh \
+		--romfs=$(ROMFS)
+
+#---------------------------------------------------------------------------------
+# Enlazado
+#---------------------------------------------------------------------------------
 
 $(BUILD)/$(TARGET).elf: $(OBJS)
-	@echo linking ...
+	@echo "Enlazando Laura..."
 	$(CXX) $(LDFLAGS) $(OBJS) $(LIBS) -o $@
+
+#---------------------------------------------------------------------------------
+# Compilación C++
+#---------------------------------------------------------------------------------
 
 $(BUILD)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	@echo "Compilando C++ $<..."
 	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
+#---------------------------------------------------------------------------------
+# Compilación C
+#---------------------------------------------------------------------------------
+
 $(BUILD)/%.o: %.c
 	@mkdir -p $(dir $@)
 	@echo "Compilando C $<..."
 	@$(CC) $(CFLAGS) -c $< -o $@
 
+#---------------------------------------------------------------------------------
+# Limpieza
+#---------------------------------------------------------------------------------
+
 clean:
-	@echo clean ...
+	@echo "Limpiando compilación..."
 	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(TARGET).bnr
 
 .PHONY: all clean
