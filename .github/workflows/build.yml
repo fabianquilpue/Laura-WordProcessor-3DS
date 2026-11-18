@@ -16,47 +16,61 @@ jobs:
       image: devkitpro/devkitarm:latest
 
     steps:
-      # -----------------------------------------------
       # Descargar repositorio
-      # -----------------------------------------------
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # -----------------------------------------------
-      # Instalar dependencias
-      # -----------------------------------------------
-
+      # Instalar dependencias sin actualizar todo el sistema
       - name: Install dependencies
+        shell: bash
         run: |
-          apt-get update
-          apt-get install -y python3 python3-pil
+          set -e
 
-          dkp-pacman -Syu --noconfirm
+          echo "Instalando dependencias de Nintendo 3DS..."
 
-          dkp-pacman -S --noconfirm \
-            devkitARM \
-            libctru \
-            citro2d \
-            citro3d \
-            3dstools \
-            tex3ds
+          installed=0
 
-      # -----------------------------------------------
+          for attempt in 1 2 3; do
+            echo "Intento de instalación: $attempt de 3"
+
+            if dkp-pacman -S --needed --noconfirm \
+              devkitARM \
+              libctru \
+              citro2d \
+              citro3d \
+              3dstools \
+              tex3ds; then
+              installed=1
+              break
+            fi
+
+            echo "La instalación falló. Se volverá a intentar."
+            sleep 10
+          done
+
+          if [ "$installed" -ne 1 ]; then
+            echo "ERROR: No se pudieron instalar las dependencias."
+            exit 1
+          fi
+
       # Configurar entorno
-      # -----------------------------------------------
-
       - name: Configure devkitPro environment
         run: |
-          echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
-          echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
-          echo "/opt/devkitpro/devkitARM/bin" >> $GITHUB_PATH
-          echo "/opt/devkitpro/tools/bin" >> $GITHUB_PATH
+          echo "DEVKITPRO=/opt/devkitpro" >> "$GITHUB_ENV"
+          echo "DEVKITARM=/opt/devkitpro/devkitARM" >> "$GITHUB_ENV"
+          echo "/opt/devkitpro/devkitARM/bin" >> "$GITHUB_PATH"
+          echo "/opt/devkitpro/tools/bin" >> "$GITHUB_PATH"
 
-      # -----------------------------------------------
+      # Comprobar herramientas
+      - name: Verify development tools
+        run: |
+          command -v arm-none-eabi-g++
+          command -v make
+          command -v bannertool
+          command -v 3dsxtool
+          command -v tex3ds
+
       # Comprobar recursos originales
-      # -----------------------------------------------
-
       - name: Verify original assets
         run: |
           test -f assets/icon.png
@@ -65,29 +79,19 @@ jobs:
 
           echo "Recursos originales encontrados."
 
-      # -----------------------------------------------
       # Generar recursos gráficos
-      # -----------------------------------------------
-
       - name: Generate Laura assets
         run: |
           python3 tools/generate_assets.py
-
           test -s romfs/splash.t3x
 
-      # -----------------------------------------------
       # Compilar aplicación
-      # -----------------------------------------------
-
       - name: Build Laura 3DS
         run: |
           make clean
           make -j2
 
-      # -----------------------------------------------
       # Verificar ejecutables
-      # -----------------------------------------------
-
       - name: Verify build outputs
         run: |
           test -s Laura.3dsx
@@ -95,18 +99,12 @@ jobs:
 
           echo "Compilación finalizada correctamente."
 
-      # -----------------------------------------------
       # Publicar artefactos
-      # -----------------------------------------------
-
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
-
         with:
           name: Laura-WordProcessor-3DS
-
           path: |
             Laura.3dsx
             Laura.smdh
-
           if-no-files-found: error
