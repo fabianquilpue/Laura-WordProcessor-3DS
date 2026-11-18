@@ -12,85 +12,63 @@ def generate_assets():
     print("Preparando recursos de Laura")
     print("========================================")
 
-    # --------------------------------------------------
-    # Rutas oficiales
-    # --------------------------------------------------
-
+    # Rutas de los recursos originales
     icon_path = "assets/icon.png"
     splash_png = "assets/splash.png"
     splash_t3x = "romfs/splash.t3x"
 
-    # --------------------------------------------------
     # Crear directorios necesarios
-    # --------------------------------------------------
-
     os.makedirs("assets/fonts", exist_ok=True)
     os.makedirs("romfs", exist_ok=True)
     os.makedirs("data", exist_ok=True)
 
-    # --------------------------------------------------
-    # Comprobar recursos originales
-    # --------------------------------------------------
-
+    # Comprobar que existen los recursos originales
     if not os.path.isfile(icon_path):
         raise FileNotFoundError(
-            "No se encuentra assets/icon.png. "
-            "Debe incorporarse el icono original de Laura."
+            "No se encuentra assets/icon.png."
         )
 
     if not os.path.isfile(splash_png):
         raise FileNotFoundError(
-            "No se encuentra assets/splash.png. "
-            "Debe incorporarse el splash original de Laura."
+            "No se encuentra assets/splash.png."
         )
 
     print("[OK] Icono original encontrado.")
     print("[OK] Splash original encontrado.")
 
-    # --------------------------------------------------
-    # Comprobar tex3ds
-    # --------------------------------------------------
-
+    # Localizar tex3ds
     tex3ds_path = shutil.which("tex3ds")
 
     if tex3ds_path is None:
         raise RuntimeError(
             "No se encuentra tex3ds. "
-            "Comprueba que las herramientas gráficas "
-            "de devkitPro estén instaladas."
+            "Comprueba la instalación de devkitPro."
         )
 
-    # --------------------------------------------------
-    # Generar textura T3X
-    # --------------------------------------------------
-
+    # Convertir PNG a T3X
     print("Convirtiendo splash original a formato T3X...")
 
     try:
         subprocess.run(
             [
                 tex3ds_path,
-                "-i",
-                splash_png,
                 "-o",
-                splash_t3x
+                splash_t3x,
+                splash_png
             ],
             check=True
         )
 
     except subprocess.CalledProcessError as error:
         raise RuntimeError(
-            "No fue posible convertir assets/splash.png "
+            "Falló la conversión de assets/splash.png "
             "a romfs/splash.t3x."
         ) from error
 
-    # --------------------------------------------------
     # Verificar resultado
-    # --------------------------------------------------
-
     if not os.path.isfile(splash_t3x):
         raise RuntimeError(
-            "tex3ds terminó sin generar romfs/splash.t3x."
+            "No se generó romfs/splash.t3x."
         )
 
     if os.path.getsize(splash_t3x) == 0:
@@ -98,8 +76,7 @@ def generate_assets():
             "El archivo romfs/splash.t3x está vacío."
         )
 
-    print("[OK] Textura T3X generada correctamente.")
-
+    print("[OK] Splash convertido correctamente.")
     print("========================================")
     print("Recursos de Laura preparados.")
     print("========================================")
