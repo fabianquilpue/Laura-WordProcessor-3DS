@@ -62,13 +62,44 @@ jobs:
           echo "/opt/devkitpro/tools/bin" >> "$GITHUB_PATH"
 
       # Comprobar herramientas
-      - name: Verify development tools
+     
+      - name: Diagnose development tools
         run: |
-          command -v arm-none-eabi-g++
-          command -v make
-          command -v bannertool
-          command -v 3dsxtool
-          command -v tex3ds
+          echo "=================================="
+          echo "DIAGNOSTICO DE HERRAMIENTAS"
+          echo "=================================="
+
+          echo ""
+          echo "1. Compilador:"
+          command -v arm-none-eabi-g++ || true
+
+          echo ""
+          echo "2. Make:"
+          command -v make || true
+
+          echo ""
+          echo "3. Bannertool:"
+          command -v bannertool || true
+
+          echo ""
+          echo "4. SMDH tools:"
+          command -v smdhtool || true
+
+          echo ""
+          echo "5. 3dsxtool:"
+          command -v 3dsxtool || true
+
+          echo ""
+          echo "6. Tex3ds:"
+          command -v tex3ds || true
+
+          echo ""
+          echo "7. Contenido de /opt/devkitpro/tools/bin:"
+          ls -la /opt/devkitpro/tools/bin/ || true
+
+          echo ""
+          echo "8. Paquetes instalados:"
+          dkp-pacman -Q
 
       # Comprobar recursos originales
       - name: Verify original assets
